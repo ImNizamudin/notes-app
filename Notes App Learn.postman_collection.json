@@ -1,0 +1,435 @@
+{
+	"info": {
+		"_postman_id": "2c5dc33b-a260-4861-9708-14e6b9fde27f",
+		"name": "Notes App Learn",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "47783230"
+	},
+	"item": [
+		{
+			"name": "Notes",
+			"item": [
+				{
+					"name": "Collaboration",
+					"item": [
+						{
+							"name": "Create Collaboration",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"userId\": \"20\",\r\n    \"noteId\": 9\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{BASE_URL}}/collaborations",
+									"host": [
+										"{{BASE_URL}}"
+									],
+									"path": [
+										"collaborations"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Delete Collaboration",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"userId\": \"20\",\r\n    \"noteId\": 9\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{BASE_URL}}/collaborations",
+									"host": [
+										"{{BASE_URL}}"
+									],
+									"path": [
+										"collaborations"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Get All Notes",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{BASE_URL}}/notes",
+							"host": [
+								"{{BASE_URL}}"
+							],
+							"path": [
+								"notes"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Note By ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{BASE_URL}}/notes/:note_id",
+							"host": [
+								"{{BASE_URL}}"
+							],
+							"path": [
+								"notes",
+								":note_id"
+							],
+							"variable": [
+								{
+									"key": "note_id",
+									"value": "6"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Note",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"title\": \"makan\",\r\n    \"body\": \"makan makan\",\r\n    \"tags\": [\r\n        \"makan\",\r\n        \"makan\",\r\n        \"makan\"\r\n    ]\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/notes",
+							"host": [
+								"{{BASE_URL}}"
+							],
+							"path": [
+								"notes"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Note",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"title\": \"vike makan\",\r\n    \"body\": \"makan makan, vike makan nasi\",\r\n    \"tags\": [\r\n        \"makan gedang\",\r\n        \"makan\",\r\n        \"makan\"\r\n    ]\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/notes/:note_id",
+							"host": [
+								"{{BASE_URL}}"
+							],
+							"path": [
+								"notes",
+								":note_id"
+							],
+							"variable": [
+								{
+									"key": "note_id",
+									"value": "6"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Note",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{BASE_URL}}/notes/:note_id",
+							"host": [
+								"{{BASE_URL}}"
+							],
+							"path": [
+								"notes",
+								":note_id"
+							],
+							"variable": [
+								{
+									"key": "note_id",
+									"value": "5"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Files",
+			"item": [
+				{
+					"name": "File Bulks",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "fields",
+									"value": "makan1",
+									"type": "text"
+								},
+								{
+									"key": "makan1",
+									"type": "file",
+									"src": "postman-cloud:///1f082272-a407-4c50-bc32-032145421892"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/upload/notes_app/bulk-upload",
+							"host": [
+								"{{BASE_URL}}"
+							],
+							"path": [
+								"upload",
+								"notes_app",
+								"bulk-upload"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Single File",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "fields",
+									"value": "makan1",
+									"type": "text"
+								},
+								{
+									"key": "makan1",
+									"type": "file",
+									"src": "postman-cloud:///1f082272-a407-4c50-bc32-032145421892"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/upload/notes_app/20250826113434-FR4pJR7.png",
+							"host": [
+								"{{BASE_URL}}"
+							],
+							"path": [
+								"upload",
+								"notes_app",
+								"20250826113434-FR4pJR7.png"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Single Upload",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "fields",
+									"value": "data",
+									"type": "text",
+									"disabled": true
+								},
+								{
+									"key": "data",
+									"type": "file",
+									"src": "postman-cloud:///1f082272-a407-4c50-bc32-032145421892"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/upload/images",
+							"host": [
+								"{{BASE_URL}}"
+							],
+							"path": [
+								"upload",
+								"images"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Register",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"username\": \"fara\",\r\n    \"password\": \"fara ngoding\",\r\n    \"fullname\": \"fara ngoding\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{BASE_URL}}/users",
+					"host": [
+						"{{BASE_URL}}"
+					],
+					"path": [
+						"users"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Login",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"const response = pm.response.json();\r",
+							"\r",
+							"if (response.data && response.data.accessToken) {\r",
+							"    pm.environment.set(\"ACCESS_TOKEN\", response.data.accessToken);\r",
+							"    console.log(\"✅ ACCESS_TOKEN disimpan ke environment\");\r",
+							"} else {\r",
+							"    console.warn(\"❌ ACCESS_TOKEN tidak ditemukan di response!\");\r",
+							"}\r",
+							"\r",
+							"if (response.data && response.data.refreshToken) {\r",
+							"    pm.environment.set(\"REFRESH_TOKEN\", response.data.refreshToken);\r",
+							"    console.log(\"✅ REFRESH_TOKEN disimpan ke environment\");\r",
+							"} else {\r",
+							"    console.warn(\"❌ REFRESH_TOKEN tidak ditemukan di response!\");\r",
+							"}\r",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"username\": \"rifki\",\r\n    \"password\": \"rifkingoding\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{BASE_URL}}/authentications",
+					"host": [
+						"{{BASE_URL}}"
+					],
+					"path": [
+						"authentications"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Me",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{BASE_URL}}/users/19",
+					"host": [
+						"{{BASE_URL}}"
+					],
+					"path": [
+						"users",
+						"19"
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{ACCESS_TOKEN}}",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	]
+}
