@@ -100,9 +100,6 @@ function AddNote() {
               />
             </div>
 
-            {/* Collaborator */}
-            {/** NOTE: tampil hanya setelah note sudah dibuat, jadi skip di sini */}
-
             {/* Content */}
             <div className="p-6">
               <div className="flex items-center space-x-2 mb-3">

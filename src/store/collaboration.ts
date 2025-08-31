@@ -5,6 +5,7 @@ interface User {
   id: string;
   username: string;
   fullname: string;
+  email?: string;
 }
 
 interface Collaboration {
@@ -17,7 +18,7 @@ interface Collaboration {
 interface CollaborationState {
   loading: boolean;
   error: string | null;
-  collaborators: Collaboration[];
+  collaborators: User[]; // Sekarang menyimpan User[], bukan Collaboration[]
   createCollaboration: (userId: string, noteId: number) => Promise<void>;
   deleteCollaboration: (userId: string, noteId: number) => Promise<void>;
   fetchCollaborators: (noteId: number) => Promise<void>;
@@ -33,21 +34,15 @@ export const useCollaborationStore = create<CollaborationState>((set, get) => ({
     try {
       const res = await apiClient(`/notes/${noteId}`, "GET");
       
-      // Handle berbagai struktur respons
-      let collaborations: Collaboration[] = [];
-      
-      if (Array.isArray(res)) {
-        collaborations = res;
-      } else if (res && res.data && Array.isArray(res.data)) {
-        collaborations = res.data;
-      } else if (res && res.collaborations && Array.isArray(res.collaborations)) {
-        collaborations = res.collaborations;
+      let collaborators: User[] = [];
+
+      if (res && res.note && res.note.user_collaborators) {
+        collaborators = res.note.user_collaborators;
       }
-      
-      set({ collaborators: collaborations });
+
+      set({ collaborators });
     } catch (err: any) {
       set({ error: err.message || "Failed to fetch collaborators" });
-      throw err;
     } finally {
       set({ loading: false });
     }
