@@ -1,4 +1,3 @@
-// src/store/auth.ts
 import { create } from "zustand";
 import apiClient from "../api/client";
 
@@ -46,24 +45,38 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ user });
   },
 
-  async login(username, password) {
+  async login(email, password) {
     set({ loading: true, error: null });
     try {
-      const data: any = await apiClient("/authentications", "POST", {
-        username,
+      const data: any = await apiClient("/auths/login", "POST", {
+        email,
         password,
       });
+
       const accessToken = data?.accessToken ?? data?.access_token ?? null;
       const refreshToken = data?.refreshToken ?? data?.refresh_token ?? null;
 
-      if (!accessToken) throw new Error("Access token not found");
+      if (!accessToken) {
+        const errorMessage = data?.meta?.message || "Login failed: No access token";
+        throw new Error(errorMessage);
+      }
 
       localStorage.setItem("ACCESS_TOKEN", accessToken);
       if (refreshToken) localStorage.setItem("REFRESH_TOKEN", refreshToken);
 
-      set({ accessToken, refreshToken, loading: false, user: { username } });
+      const userData = data.user ? data.user : { email };
+
+      set({ accessToken, refreshToken, loading: false, user: userData, error: null });
     } catch (err: any) {
-      set({ error: err.message || "Login failed", loading: false });
+      let errorMessage = "Login failed";
+
+      if (err.response) {
+        errorMessage = err.response.meta?.message || errorMessage;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+
+      set({ error: errorMessage, loading: false });
       throw err;
     }
   },

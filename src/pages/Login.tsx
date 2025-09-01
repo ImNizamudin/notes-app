@@ -1,41 +1,23 @@
 import { useState } from "react";
-import { apiClient } from "../api/client";
 import { useAuthStore } from "../store/auth";
 import { useNavigate, Link } from "react-router-dom";
-import { User, Lock, LogIn, Eye, EyeOff } from "lucide-react";
+import { Mail, Lock, LogIn, Eye, EyeOff } from "lucide-react";
 
 export default function Login() {
   const navigate = useNavigate();
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
-  const { setUser, loadFromStorage } = useAuthStore();
+
+  const { login, loading, error } = useAuthStore();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErr(null);
-    setLoading(true);
     try {
-      const data: any = await apiClient("/authentications", "POST", {
-        username,
-        password,
-      });
-      const accessToken = data?.accessToken ?? data?.access_token;
-      const refreshToken = data?.refreshToken ?? data?.refresh_token;
-      if (!accessToken) throw new Error("Token tidak diterima dari server");
-
-      localStorage.setItem("ACCESS_TOKEN", accessToken);
-      if (refreshToken) localStorage.setItem("REFRESH_TOKEN", refreshToken);
-
-      loadFromStorage();
-      setUser({ username });
+      await login(email, password);
       navigate("/");
-    } catch (e: any) {
-      setErr(e.message || "Login gagal");
-    } finally {
-      setLoading(false);
+    } catch (err) {
+      console.log(err);
     }
   };
 
@@ -70,16 +52,16 @@ export default function Login() {
             {/* Username Field */}
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-300">
-                Username
+                Email
               </label>
               <div className="relative">
-                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                 <input
-                  type="text"
-                  placeholder="Enter your username"
+                  type="email"
+                  placeholder="Enter your email address"
                   className="w-full pl-12 pr-4 py-3 bg-gray-700/50 border border-gray-600 text-gray-100 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all placeholder-gray-400"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   required
                 />
               </div>
@@ -111,9 +93,9 @@ export default function Login() {
             </div>
 
             {/* Error Message */}
-            {err && (
+            {error && (
               <div className="bg-red-900/50 border border-red-700 text-red-200 px-4 py-3 rounded-xl">
-                <p className="text-sm">{err}</p>
+                <p className="text-sm">{error}</p>
               </div>
             )}
 

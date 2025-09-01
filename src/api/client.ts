@@ -57,7 +57,7 @@ export async function apiClient(
       (data && (data.message || data.error || (data as any).reason)) ||
       res.statusText ||
       "API Error";
-    throw new Error(message);
+    throw { response: data };
   }
   return data;
 }

@@ -6,7 +6,7 @@ import { User, Lock, UserPlus, Eye, EyeOff, Mail } from "lucide-react";
 export default function Register() {
   const navigate = useNavigate();
   const [form, setForm] = useState({
-    username: "",
+    email: "", // Ganti username menjadi email
     password: "",
     fullname: "",
   });
@@ -23,7 +23,12 @@ export default function Register() {
     setErr(null);
     setLoading(true);
     try {
-      await apiClient("/users", "POST", form);
+      // Kirim ke endpoint baru dengan struktur data yang benar
+      await apiClient("/auths/register", "POST", {
+        email: form.email,
+        password: form.password,
+        fullname: form.fullname
+      });
       navigate("/login");
     } catch (e: any) {
       setErr(e.message || "Registrasi gagal");
@@ -66,7 +71,7 @@ export default function Register() {
                 Full Name
               </label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                 <input
                   name="fullname"
                   type="text"
@@ -79,19 +84,19 @@ export default function Register() {
               </div>
             </div>
 
-            {/* Username Field */}
+            {/* Email Field (menggantikan username) */}
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-300">
-                Username
+                Email
               </label>
               <div className="relative">
-                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                 <input
-                  name="username"
-                  type="text"
-                  placeholder="Choose a username"
+                  name="email"
+                  type="email"
+                  placeholder="Enter your email address"
                   className="w-full pl-12 pr-4 py-3 bg-gray-700/50 border border-gray-600 text-gray-100 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all placeholder-gray-400"
-                  value={form.username}
+                  value={form.email}
                   onChange={onChange}
                   required
                 />
