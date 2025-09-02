@@ -5,6 +5,57 @@ import { useNotesStore, type Note } from "../store/note";
 import { useCollaborationStore } from "../store/collaboration";
 import CollaboratorInput from "../components/CollaboratorInput";
 import { Save, X, ArrowLeft, FileText, Tag, Type, Clock, Users, MinusCircle, PlusCircle } from "lucide-react";
+import ReactQuill from "react-quill";
+import "react-quill/dist/quill.snow.css";
+import hljs from "highlight.js";
+import "highlight.js/styles/github-dark.css";
+import javascript from "highlight.js/lib/languages/javascript";
+import python from "highlight.js/lib/languages/python";
+import java from "highlight.js/lib/languages/java";
+
+// Extract plain text dari HTML
+const stripHtml = (html: string): string => {
+  const tmp = document.createElement("DIV");
+  tmp.innerHTML = html;
+  return tmp.textContent || tmp.innerText || "";
+};
+
+hljs.registerLanguage("javascript", javascript);
+hljs.registerLanguage("python", python);
+hljs.registerLanguage("java", java);
+
+hljs.configure({
+  languages: ["javascript", "typescript", "html", "css", "php", "python"],
+});
+
+// Quill toolbar configuration
+const quillModules = {
+  syntax: {
+    highlight: (text: string) => hljs.highlightAuto(text).value,
+  },
+  toolbar: [
+    [{ header: [1, 2, 3, false] }, { font: [] }], // Normal/Heading + Font
+    ["bold", "italic", "underline", "strike"], // Styles
+    [{ list: "ordered" }, { list: "bullet" }, { align: [] }], // List + Align
+    ["link", "image", "formula", "code"], // Insert tools
+  ],
+};
+
+const quillFormats = [
+  "header",
+  "font",
+  "bold",
+  "italic",
+  "underline",
+  "strike",
+  "list",
+  "bullet",
+  "align",
+  "link",
+  "image",
+  "formula",
+  "code",
+];
 
 function EditNote() {
   const { id } = useParams<{ id: string }>();
@@ -20,6 +71,7 @@ function EditNote() {
   const [initial, setInitial] = useState<Note | null>(null);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
+  const [plainTextBody, setPlainTextBody] = useState("");
   const [tagsInput, setTagsInput] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -57,7 +109,7 @@ function EditNote() {
         .split(",")
         .map((t) => t.trim())
         .filter(Boolean);
-      await updateNote(id, { title, body, tags });
+      await updateNote(id, { title, body: plainTextBody, tags });
 
       if (collaboratorId.trim()) {
         await createCollaboration(collaboratorId, parseInt(id));
@@ -69,6 +121,11 @@ function EditNote() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleEditorChange = (content: string) => {
+    setBody(content);
+    setPlainTextBody(stripHtml(content));
   };
 
   const hasChanges = initial && (
@@ -199,13 +256,33 @@ function EditNote() {
                   <FileText className="w-5 h-5 text-gray-400" />
                   <label className="text-sm font-medium text-gray-300">Content</label>
                 </div>
-                <textarea
+                {/* <textarea
                   className="w-full bg-transparent border-none outline-none text-gray-100 placeholder-gray-500 resize-none min-h-[300px] leading-relaxed"
                   placeholder="Write your note content here..."
                   value={body}
                   onChange={(e) => setBody(e.target.value)}
                   required
-                />
+                /> */}
+
+                <div className="bg-gray-700 border border-gray-600 rounded-lg overflow-hidden">
+                  <ReactQuill
+                    value={body}
+                    onChange={handleEditorChange}
+                    modules={quillModules}
+                    formats={quillFormats}
+                    placeholder="Write your amazing content here..."
+                    theme="snow"
+                  />
+                </div>
+                
+                {plainTextBody && (
+                  <div className="mt-4 p-4 bg-gray-750 rounded-lg">
+                    <h4 className="text-sm font-medium text-gray-300 mb-2">Preview:</h4>
+                    <p className="text-gray-400 text-sm">
+                      {plainTextBody.substring(0, 100)}...
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Changes Indicator */}

@@ -32,7 +32,7 @@ function NoteList() {
 
     return (
         <div className="min-h-screen bg-gray-900">
-            <Navbar />
+            {/* <Navbar /> */}
             
             {/* Header Section */}
             <div className="bg-gradient-to-r from-gray-800 to-gray-900 border-b border-gray-700">

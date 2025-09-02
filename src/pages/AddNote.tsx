@@ -5,7 +5,6 @@ import Navbar from "../components/Navbar";
 import { useNotesStore } from "../store/note";
 import { useNavigate } from "react-router-dom";
 import { Save, X, ArrowLeft, FileText, Tag, Type } from "lucide-react";
-import "react-quill/dist/quill.snow.css";
 import hljs from "highlight.js";
 import "highlight.js/styles/github-dark.css";
 import javascript from "highlight.js/lib/languages/javascript";
@@ -236,51 +235,6 @@ function AddNote() {
           </div>
         </form>
       </div>
-
-      <style>
-        {`
-          .ql-toolbar.ql-snow {
-            background: #1f2937; /* bg-gray-800 */
-            border: 1px solid #374151; /* border-gray-700 */
-          }
-
-          .ql-container.ql-snow {
-            background: #111827; /* bg-gray-900 */
-            border: 1px solid #374151;
-            color: #f9fafb; /* text-gray-100 */
-            min-height: 300px; /* tinggi editor */
-          }
-
-          /* Icon toolbar lebih terang */
-          .ql-toolbar .ql-stroke {
-            stroke: #e5e7eb !important; /* text-gray-200 */
-          }
-
-          .ql-toolbar .ql-fill {
-            fill: #e5e7eb !important;
-          }
-
-          .ql-toolbar .ql-picker {
-            color: #e5e7eb !important;
-          }
-
-          /* Dropdown background */
-          .ql-picker-options {
-            background: #1f2937 !important;
-            border: 1px solid #374151 !important;
-          }
-          
-          .ql-editor code {
-            background: #1e293b !important; /* bg-slate-800 */
-            color: #f9fafb !important;      /* text-gray-100 */
-            border-radius: 0.375rem;        /* rounded-md */
-            padding: 0.5rem 0.75rem;        /* px-3 py-2 */
-            font-family: monospace;
-            white-space: pre-wrap;          /* biar nggak overflow */
-          }
-        `}
-      </style>
-
     </div>
   );
 }

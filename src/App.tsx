@@ -6,11 +6,16 @@ import AddNote from "./pages/AddNote";
 import EditNote from "./pages/EditNote";
 import NoteDetail from "./pages/NoteDetail";
 import { useAuthStore } from "./store/auth";
+import MainLayout from "./layouts/MainLayout";
+import EmailVerified from "./pages/EmailVerified";
+import VerifyEmail from "./pages/VerifyEmail";
 import type { JSX } from "react";
+import Profile from "./pages/Profile";
+import Media from "./pages/Media";
 
-function PrivateRoute({ children }: { children: JSX.Element }) {
+function PrivateRoute({ children, activeMenu }: { children: JSX.Element; activeMenu?: string }) {
   const token = useAuthStore((s) => s.accessToken);
-  return token ? children : <Navigate to="/login" />;
+  return token ? <MainLayout activeMenu={activeMenu}>{children}</MainLayout> : <Navigate to="/login" />;
 }
 
 export default function App() {
@@ -19,10 +24,13 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/verify-email" element={<VerifyEmail />} />
+        <Route path="/email-verified" element={<EmailVerified />} />
+
         <Route
           path="/"
           element={
-            <PrivateRoute>
+            <PrivateRoute activeMenu="notes">
               <NoteList />
             </PrivateRoute>
           }
@@ -30,7 +38,7 @@ export default function App() {
         <Route
           path="/notes/new"
           element={
-            <PrivateRoute>
+            <PrivateRoute activeMenu="notes">
               <AddNote />
             </PrivateRoute>
           }
@@ -38,7 +46,7 @@ export default function App() {
         <Route
           path="/notes/:id"
           element={
-            <PrivateRoute>
+            <PrivateRoute activeMenu="notes">
               <NoteDetail />
             </PrivateRoute>
           }
@@ -46,8 +54,25 @@ export default function App() {
         <Route
           path="/notes/:id/edit"
           element={
-            <PrivateRoute>
+            <PrivateRoute activeMenu="notes">
               <EditNote />
+            </PrivateRoute>
+          }
+        />
+        {/* Tambahkan route lainnya nanti */}
+        <Route
+          path="/media"
+          element={
+            <PrivateRoute activeMenu="media">
+              <Media />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <PrivateRoute activeMenu="profile">
+              <Profile />
             </PrivateRoute>
           }
         />

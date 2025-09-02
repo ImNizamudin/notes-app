@@ -54,7 +54,7 @@ export default function CollaboratorInput({ noteId }: CollaboratorInputProps) {
     
     setIsSearching(true);
     try {
-      const res = await apiClient(`/users?username=${q}`, "GET");
+      const res = await apiClient(`/user?username=${q}`, "GET");
       
       let users: User[] = [];
       

@@ -29,7 +29,7 @@ export default function Register() {
         password: form.password,
         fullname: form.fullname
       });
-      navigate("/login");
+      navigate(`/verify-email?email=${encodeURIComponent(form.email)}`);
     } catch (e: any) {
       setErr(e.message || "Registrasi gagal");
     } finally {
@@ -131,7 +131,7 @@ export default function Register() {
 
             {/* Password Requirements */}
             <div className="text-xs text-gray-400">
-              <p>Password should be at least 6 characters long</p>
+              <p>Password should be at least 8 characters long</p>
             </div>
 
             {/* Error Message */}
