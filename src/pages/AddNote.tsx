@@ -1,10 +1,60 @@
 import { useState } from "react";
-import { CKEditor } from "@ckeditor/ckeditor5-react";
-import ClassicEditor from "@ckeditor/ckeditor5-build-classic";
+import ReactQuill from "react-quill";
+import "react-quill/dist/quill.snow.css";
 import Navbar from "../components/Navbar";
 import { useNotesStore } from "../store/note";
 import { useNavigate } from "react-router-dom";
 import { Save, X, ArrowLeft, FileText, Tag, Type } from "lucide-react";
+import "react-quill/dist/quill.snow.css";
+import hljs from "highlight.js";
+import "highlight.js/styles/github-dark.css";
+import javascript from "highlight.js/lib/languages/javascript";
+import python from "highlight.js/lib/languages/python";
+import java from "highlight.js/lib/languages/java";
+
+// Extract plain text dari HTML
+const stripHtml = (html: string): string => {
+  const tmp = document.createElement("DIV");
+  tmp.innerHTML = html;
+  return tmp.textContent || tmp.innerText || "";
+};
+
+hljs.registerLanguage("javascript", javascript);
+hljs.registerLanguage("python", python);
+hljs.registerLanguage("java", java);
+
+hljs.configure({
+  languages: ["javascript", "typescript", "html", "css", "php", "python"],
+});
+
+// Quill toolbar configuration
+const quillModules = {
+  syntax: {
+    highlight: (text: string) => hljs.highlightAuto(text).value,
+  },
+  toolbar: [
+    [{ header: [1, 2, 3, false] }, { font: [] }], // Normal/Heading + Font
+    ["bold", "italic", "underline", "strike"], // Styles
+    [{ list: "ordered" }, { list: "bullet" }, { align: [] }], // List + Align
+    ["link", "image", "formula", "code"], // Insert tools
+  ],
+};
+
+const quillFormats = [
+  "header",
+  "font",
+  "bold",
+  "italic",
+  "underline",
+  "strike",
+  "list",
+  "bullet",
+  "align",
+  "link",
+  "image",
+  "formula",
+  "code",
+];
 
 function AddNote() {
   const navigate = useNavigate();
@@ -12,49 +62,10 @@ function AddNote() {
 
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
+  const [plainTextBody, setPlainTextBody] = useState("");
   const [tagsInput, setTagsInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-
-  // Enhanced configuration untuk Classic Editor
-  const editorConfig = {
-    toolbar: {
-      items: [
-        'heading', 
-        '|',
-        'bold', 'italic', 'underline', 'strikethrough', 'code',
-        '|',
-        'link', 'insertImage', 'mediaEmbed',
-        '|',
-        'bulletedList', 'numberedList', 'todoList',
-        '|',
-        'blockQuote', 'codeBlock', 'insertTable',
-        '|',
-        'undo', 'redo',
-        '|',
-        'alignment', 'fontSize', 'fontFamily', 'fontColor', 'fontBackgroundColor',
-        '|',
-        'horizontalLine', 'pageBreak', 'specialCharacters'
-      ],
-      shouldNotGroupWhenFull: true
-    },
-    heading: {
-      options: [
-        { model: 'paragraph', title: 'Paragraph', class: 'ck-heading_paragraph' },
-        { model: 'heading1', view: 'h1', title: 'Heading 1', class: 'ck-heading_heading1' },
-        { model: 'heading2', view: 'h2', title: 'Heading 2', class: 'ck-heading_heading2' },
-        { model: 'heading3', view: 'h3', title: 'Heading 3', class: 'ck-heading_heading3' },
-        { model: 'heading4', view: 'h4', title: 'Heading 4', class: 'ck-heading_heading4' }
-      ]
-    },
-    link: {
-      addTargetToExternalLinks: true,
-      defaultProtocol: 'https://'
-    },
-    placeholder: "Write your amazing content here...",
-    removePlugins: ['Markdown'],
-    extraPlugins: []
-  };
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,8 +76,14 @@ function AddNote() {
         .split(",")
         .map((t) => t.trim())
         .filter(Boolean);
-      const note = await addNote({ title, body, tags });
-      navigate('/');
+
+      const note = await addNote({
+        title,
+        body: plainTextBody,
+        tags,
+      });
+
+      navigate("/");
     } catch (e: any) {
       setErr(e.message || "Gagal menambahkan note");
     } finally {
@@ -82,6 +99,11 @@ function AddNote() {
     } else {
       navigate(-1);
     }
+  };
+
+  const handleEditorChange = (content: string) => {
+    setBody(content);
+    setPlainTextBody(stripHtml(content));
   };
 
   return (
@@ -100,7 +122,7 @@ function AddNote() {
             </button>
             <div>
               <h1 className="text-2xl font-bold text-gray-100">Create New Note</h1>
-              <p className="text-gray-400 text-sm">Rich text editor with classic interface</p>
+              <p className="text-gray-400 text-sm">Rich text editor (Quill.js)</p>
             </div>
           </div>
         </div>
@@ -110,7 +132,6 @@ function AddNote() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <form onSubmit={onSubmit} className="space-y-6">
           <div className="bg-gray-800 border border-gray-700 rounded-xl shadow-xl overflow-hidden">
-            
             {/* Title */}
             <div className="p-6 border-b border-gray-700">
               <div className="flex items-center space-x-2 mb-3">
@@ -139,26 +160,50 @@ function AddNote() {
                 value={tagsInput}
                 onChange={(e) => setTagsInput(e.target.value)}
               />
+              {tagsInput && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {tagsInput.split(',').map((tag, index) => {
+                      const trimmedTag = tag.trim();
+                      return trimmedTag ? (
+                        <span
+                          key={index}
+                          className="inline-flex items-center space-x-1 bg-blue-600/20 text-blue-300 text-sm px-3 py-1 rounded-lg border border-blue-500/30"
+                        >
+                          <Tag className="w-3 h-3" />
+                          <span>{trimmedTag}</span>
+                        </span>
+                      ) : null;
+                    })}
+                  </div>
+                )}
             </div>
 
-            {/* Content - Enhanced Classic Editor */}
+            {/* Content */}
             <div className="p-6">
               <div className="flex items-center space-x-2 mb-3">
                 <FileText className="w-5 h-5 text-gray-400" />
                 <label className="text-sm font-medium text-gray-300">Content</label>
               </div>
-              
-              <div className="border border-gray-600 rounded-lg overflow-hidden">
-                <CKEditor
-                  editor={ClassicEditor}
-                  config={editorConfig}
-                  data={body}
-                  onChange={(event, editor) => {
-                    const data = editor.getData();
-                    setBody(data);
-                  }}
+
+              <div className="bg-gray-700 border border-gray-600 rounded-lg overflow-hidden">
+                <ReactQuill
+                  value={body}
+                  onChange={handleEditorChange}
+                  modules={quillModules}
+                  formats={quillFormats}
+                  placeholder="Write your amazing content here..."
+                  theme="snow"
                 />
               </div>
+
+              {plainTextBody && (
+                <div className="mt-4 p-4 bg-gray-750 rounded-lg">
+                  <h4 className="text-sm font-medium text-gray-300 mb-2">Preview:</h4>
+                  <p className="text-gray-400 text-sm">
+                    {plainTextBody.substring(0, 100)}...
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Error */}
@@ -190,220 +235,52 @@ function AddNote() {
             </div>
           </div>
         </form>
-
-        {/* Custom CSS untuk Classic Editor */}
-        <style>
-          {`
-            /* Reset default CKEditor styles */
-            .ck.ck-editor {
-              color: #f3f4f6 !important;
-            }
-            
-            .ck.ck-editor__editable_inline {
-              min-height: 400px;
-              padding: 1.5rem;
-              background: #374151 !important; /* Same as bg-gray-700 */
-              color: #f3f4f6 !important; /* text-gray-100 */
-              border: 1px solid #4b5563 !important; /* border-gray-600 */
-              font-size: 16px;
-              line-height: 1.6;
-            }
-            
-            .ck.ck-editor__editable_inline:focus {
-              outline: none;
-              box-shadow: 0 0 0 2px #3b82f6 !important;
-              border-color: #3b82f6 !important;
-            }
-            
-            .ck.ck-toolbar {
-              background: #4b5563 !important; /* bg-gray-600 */
-              border: 1px solid #6b7280 !important; /* border-gray-500 */
-              border-bottom: none !important;
-              padding: 0.5rem;
-              border-radius: 0.5rem 0.5rem 0 0;
-            }
-            
-            .ck.ck-toolbar__separator {
-              background-color: #6b7280 !important; /* border-gray-500 */
-            }
-            
-            .ck.ck-button {
-              color: #f3f4f6 !important; /* text-gray-100 */
-              padding: 0.375rem 0.5rem;
-              border-radius: 0.25rem;
-              transition: all 0.2s;
-            }
-            
-            .ck.ck-button:not(.ck-disabled):hover {
-              background: #6b7280 !important; /* hover:bg-gray-500 */
-              color: #ffffff !important;
-            }
-            
-            .ck.ck-button.ck-on {
-              background: #3b82f6 !important; /* bg-blue-500 */
-              color: #ffffff !important;
-            }
-            
-            .ck.ck-dropdown__panel {
-              background: #374151 !important; /* bg-gray-700 */
-              border: 1px solid #6b7280 !important; /* border-gray-500 */
-              border-radius: 0.375rem;
-              box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            }
-            
-            .ck.ck-list__item {
-              color: #f3f4f6 !important; /* text-gray-100 */
-              padding: 0.5rem 1rem;
-            }
-            
-            .ck.ck-list__item:hover {
-              background: #4b5563 !important; /* bg-gray-600 */
-              color: #ffffff !important;
-            }
-            
-            .ck.ck-input-text {
-              background: #4b5563 !important; /* bg-gray-600 */
-              border: 1px solid #6b7280 !important; /* border-gray-500 */
-              color: #f3f4f6 !important; /* text-gray-100 */
-              border-radius: 0.25rem;
-            }
-            
-            .ck.ck-input-text:focus {
-              border-color: #3b82f6 !important;
-              box-shadow: 0 0 0 1px #3b82f6 !important;
-            }
-            
-            /* Override semua text colors di content */
-            .ck.ck-content {
-              background: #374151 !important;
-              color: #f3f4f6 !important;
-            }
-            
-            .ck.ck-content * {
-              color: #f3f4f6 !important;
-            }
-            
-            .ck.ck-content h1, .ck.ck-content h2, .ck.ck-content h3, .ck.ck-content h4 {
-              color: #f9fafb !important; /* text-gray-50 */
-              margin: 1.5rem 0 1rem 0;
-              font-weight: 600;
-            }
-            
-            .ck.ck-content h1 { font-size: 2.25rem; }
-            .ck.ck-content h2 { font-size: 1.875rem; }
-            .ck.ck-content h3 { font-size: 1.5rem; }
-            .ck.ck-content h4 { font-size: 1.25rem; }
-            
-            .ck.ck-content p {
-              margin: 1rem 0;
-              color: #f3f4f6 !important;
-            }
-            
-            .ck.ck-content blockquote {
-              border-left: 4px solid #3b82f6 !important;
-              padding-left: 1.5rem;
-              margin: 1.5rem 0;
-              font-style: italic;
-              color: #d1d5db !important; /* text-gray-300 */
-              background: #4b5563 !important; /* bg-gray-600 */
-              padding: 1rem;
-              border-radius: 0.375rem;
-            }
-            
-            .ck.ck-content ul, .ck.ck-content ol {
-              padding-left: 2rem;
-              margin: 1rem 0;
-            }
-            
-            .ck.ck-content li {
-              margin: 0.5rem 0;
-              color: #f3f4f6 !important;
-            }
-            
-            .ck.ck-content table {
-              width: 100%;
-              border-collapse: collapse;
-              margin: 1rem 0;
-              background: #4b5563 !important; /* bg-gray-600 */
-            }
-            
-            .ck.ck-content table td, .ck.ck-content table th {
-              border: 1px solid #6b7280 !important; /* border-gray-500 */
-              padding: 0.75rem;
-              color: #f3f4f6 !important;
-            }
-            
-            .ck.ck-content table th {
-              background: #374151 !important; /* bg-gray-700 */
-              font-weight: 600;
-            }
-            
-            .ck.ck-content code {
-              background: #1f2937 !important; /* bg-gray-800 */
-              color: #f3f4f6 !important;
-              padding: 0.125rem 0.25rem;
-              border-radius: 0.25rem;
-              font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-            }
-            
-            .ck.ck-content pre {
-              background: #1f2937 !important; /* bg-gray-800 */
-              color: #f3f4f6 !important;
-              padding: 1rem;
-              border-radius: 0.375rem;
-              overflow-x: auto;
-              margin: 1rem 0;
-              border: 1px solid #374151 !important;
-            }
-            
-            .ck.ck-content pre code {
-              background: transparent !important;
-              padding: 0;
-            }
-            
-            .ck.ck-content a {
-              color: #3b82f6 !important; /* text-blue-400 */
-              text-decoration: underline;
-            }
-            
-            .ck.ck-content a:hover {
-              color: #2563eb !important; /* text-blue-500 */
-            }
-            
-            .ck.ck-content img {
-              max-width: 100%;
-              height: auto;
-              border-radius: 0.375rem;
-              border: 1px solid #6b7280 !important;
-            }
-            
-            /* Placeholder text color */
-            .ck.ck-editor__editable_inline .ck-placeholder::before {
-              color: #9ca3af !important; /* text-gray-400 */
-            }
-            
-            /* Selection background */
-            .ck.ck-editor__editable_inline ::selection {
-              background: #3b82f6 !important;
-              color: #ffffff !important;
-            }
-            
-            /* Untuk dropdown items */
-            .ck.ck-dropdown__panel .ck-button__label {
-              color: #f3f4f6 !important;
-            }
-            
-            /* Icon colors */
-            .ck.ck-icon {
-              color: #f3f4f6 !important;
-            }
-            
-            .ck.ck-button:hover .ck.ck-icon {
-              color: #ffffff !important;
-            }
-          `}
-        </style>
       </div>
+
+      <style>
+        {`
+          .ql-toolbar.ql-snow {
+            background: #1f2937; /* bg-gray-800 */
+            border: 1px solid #374151; /* border-gray-700 */
+          }
+
+          .ql-container.ql-snow {
+            background: #111827; /* bg-gray-900 */
+            border: 1px solid #374151;
+            color: #f9fafb; /* text-gray-100 */
+            min-height: 300px; /* tinggi editor */
+          }
+
+          /* Icon toolbar lebih terang */
+          .ql-toolbar .ql-stroke {
+            stroke: #e5e7eb !important; /* text-gray-200 */
+          }
+
+          .ql-toolbar .ql-fill {
+            fill: #e5e7eb !important;
+          }
+
+          .ql-toolbar .ql-picker {
+            color: #e5e7eb !important;
+          }
+
+          /* Dropdown background */
+          .ql-picker-options {
+            background: #1f2937 !important;
+            border: 1px solid #374151 !important;
+          }
+          
+          .ql-editor code {
+            background: #1e293b !important; /* bg-slate-800 */
+            color: #f9fafb !important;      /* text-gray-100 */
+            border-radius: 0.375rem;        /* rounded-md */
+            padding: 0.5rem 0.75rem;        /* px-3 py-2 */
+            font-family: monospace;
+            white-space: pre-wrap;          /* biar nggak overflow */
+          }
+        `}
+      </style>
+
     </div>
   );
 }
