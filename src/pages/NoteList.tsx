@@ -2,26 +2,15 @@ import { useEffect, useState } from "react";
 import { useNotesStore } from "../store/note";
 import NoteCard from "../components/NoteCard";
 import { Link } from "react-router-dom";
-import Navbar from "../components/Navbar";
 import { Plus, Search, Grid, List, FileText } from "lucide-react";
 
 function NoteList() {
-    const { notes, fetchNotes } = useNotesStore((state) => state);
+    const { notes, fetchNotes, loading } = useNotesStore((state) => state);
     const [searchTerm, setSearchTerm] = useState("");
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const loadNotes = async () => {
-            try {
-                await fetchNotes();
-            } catch (error) {
-                console.error("Error fetching notes:", error);
-            } finally {
-                setLoading(false);
-            }
-        };
-        loadNotes();
+        fetchNotes();
     }, [fetchNotes]);
 
     const filteredNotes = notes.filter(note =>
@@ -33,7 +22,7 @@ function NoteList() {
     return (
         <div className="min-h-screen bg-gray-900">
             {/* <Navbar /> */}
-            
+
             {/* Header Section */}
             <div className="bg-gradient-to-r from-gray-800 to-gray-900 border-b border-gray-700">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

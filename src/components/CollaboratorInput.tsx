@@ -31,7 +31,6 @@ export default function CollaboratorInput({ noteId }: CollaboratorInputProps) {
 
   // Fetch collaborators ketika component mount
   useEffect(() => {
-    console.log("Fetching collaborators for noteId:", noteId);
     fetchCollaborators(noteId);
   }, [noteId, fetchCollaborators]);
 

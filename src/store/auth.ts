@@ -72,6 +72,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       if (refreshToken) localStorage.setItem("REFRESH_TOKEN", refreshToken);
 
       const userData = data.user ? data.user : { email };
+      localStorage.setItem("USER_EMAIL", JSON.stringify(userData));
 
       set({ accessToken, refreshToken, loading: false, user: userData, error: null });
     } catch (err: any) {
@@ -92,6 +93,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     localStorage.removeItem("ACCESS_TOKEN");
     localStorage.removeItem("REFRESH_TOKEN");
     localStorage.removeItem("USER");
+    localStorage.removeItem("USER_EMAIL");
     set({ accessToken: null, refreshToken: null, user: null });
   },
 
@@ -100,7 +102,6 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       const data:any = await apiClient("/auths/get_me", "GET");
 
-      console.log("Fetched user profile:", data.auth);
       const userData = data.auth ? data.auth : null;
 
       if (!userData) {

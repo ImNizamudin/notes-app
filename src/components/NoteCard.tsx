@@ -2,6 +2,9 @@ import { Link } from "react-router-dom";
 import { useNotesStore } from "../store/note";
 import { Edit3, Trash2, Tag, Clock } from "lucide-react";
 import { useState } from "react";
+import ReactQuill from "react-quill";
+import "react-quill/dist/quill.snow.css";
+import DOMPurify  from "dompurify";
 
 interface Props {
     note: {
@@ -76,10 +79,17 @@ function NoteCard({ note }: Props) {
                 </div>
             </div>
 
+            {/* kemungkinan diganti thumbnail */}
+
             {/* Content Preview */}
             <p className="text-gray-400 text-sm mb-4 line-clamp-3 leading-relaxed">
                 {truncateText(note.body) || 'No content'}
             </p>
+
+            {/* <div 
+                className="ql-editor text-gray-400 text-sm mb-4 line-clamp-3 leading-relaxed"
+                dangerouslySetInnerHTML={{ __html: truncateText(DOMPurify.sanitize(note.body)) }}
+            /> */}
 
             {/* Tags */}
             {note.tags && note.tags.length > 0 && (

@@ -4,19 +4,13 @@ import "react-quill/dist/quill.snow.css";
 import Navbar from "../components/Navbar";
 import { useNotesStore } from "../store/note";
 import { useNavigate } from "react-router-dom";
-import { Save, X, ArrowLeft, FileText, Tag, Type } from "lucide-react";
+import { Save, X, ArrowLeft, FileText, Tag, Type, Eye } from "lucide-react";
 import hljs from "highlight.js";
 import "highlight.js/styles/github-dark.css";
 import javascript from "highlight.js/lib/languages/javascript";
 import python from "highlight.js/lib/languages/python";
 import java from "highlight.js/lib/languages/java";
-
-// Extract plain text dari HTML
-const stripHtml = (html: string): string => {
-  const tmp = document.createElement("DIV");
-  tmp.innerHTML = html;
-  return tmp.textContent || tmp.innerText || "";
-};
+import DOMPurify from "dompurify";
 
 hljs.registerLanguage("javascript", javascript);
 hljs.registerLanguage("python", python);
@@ -61,10 +55,10 @@ function AddNote() {
 
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
-  const [plainTextBody, setPlainTextBody] = useState("");
   const [tagsInput, setTagsInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,7 +72,7 @@ function AddNote() {
 
       const note = await addNote({
         title,
-        body: plainTextBody,
+        body,
         tags,
       });
 
@@ -102,12 +96,11 @@ function AddNote() {
 
   const handleEditorChange = (content: string) => {
     setBody(content);
-    setPlainTextBody(stripHtml(content));
   };
 
   return (
     <div className="min-h-screen bg-gray-900">
-      <Navbar />
+      {/* <Navbar /> */}
 
       {/* Header */}
       <div className="bg-gradient-to-r from-gray-800 to-gray-900 border-b border-gray-700">
@@ -195,12 +188,27 @@ function AddNote() {
                 />
               </div>
 
-              {plainTextBody && (
-                <div className="mt-4 p-4 bg-gray-750 rounded-lg">
-                  <h4 className="text-sm font-medium text-gray-300 mb-2">Preview:</h4>
-                  <p className="text-gray-400 text-sm">
-                    {plainTextBody.substring(0, 100)}...
-                  </p>
+              <button
+                type="button"
+                onClick={() => setShowPreview(!showPreview)}
+                className="flex items-center space-x-2 px-3 py-1 text-gray-400 hover:text-gray-200 hover:bg-gray-700 rounded-lg transition-colors"
+              >
+                <Eye className="w-4 h-4" />
+                <span className="text-sm">{showPreview ? "Hide Preview" : "Show Preview"}</span>
+              </button>
+
+              {showPreview && (
+                <div className="bg-gray-700 border border-gray-600 rounded-lg p-4 min-h-[300px] text-white ql-snow">
+                  {body ? (
+                    <div
+                      className="ql-editor"
+                      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(body) }}
+                    />
+                  ) : (
+                    <p className="text-gray-400 text-center py-12">
+                      No content to preview. Start typing to preview.
+                    </p>
+                  )}
                 </div>
               )}
             </div>

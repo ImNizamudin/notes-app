@@ -3,6 +3,10 @@ import Navbar from "../components/Navbar";
 import { useNotesStore, type Note } from "../store/note";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { Edit3, Trash2, ArrowLeft, Calendar, Tag, FileText } from "lucide-react";
+import DOMPurify from "dompurify";
+import ReactQuill from "react-quill";
+import "react-quill/dist/quill.snow.css";
+
 
 function NoteDetail() {
   const { id } = useParams<{ id: string }>();
@@ -20,6 +24,9 @@ function NoteDetail() {
   useEffect(() => {
     if (!id) return;
     const local = getNote(id);
+    // console.log("Local note:", local);
+
+    
     if (local) {
       setNote(local);
       setLoading(false);
@@ -29,7 +36,8 @@ function NoteDetail() {
         .catch((e) => setErr(e.message || "Gagal memuat note"))
         .finally(() => setLoading(false));
     }
-  }, [id, getNote, fetchNoteById]);
+  }, [id]);
+  // }, [id, getNote, fetchNoteById]);
 
   const onDelete = async () => {
     if (!id) return;
@@ -61,7 +69,7 @@ function NoteDetail() {
 
   return (
     <div className="min-h-screen bg-gray-900">
-      <Navbar />
+      {/* <Navbar /> */}
       
       {/* Header */}
       <div className="bg-gradient-to-r from-gray-800 to-gray-900 border-b border-gray-700">
@@ -164,7 +172,11 @@ function NoteDetail() {
                 {note.body ? (
                   <div className="prose prose-invert max-w-none">
                     <pre className="whitespace-pre-wrap text-gray-300 leading-relaxed font-sans">
-                      {note.body}
+                      <div 
+                        className="ql-editor"
+                        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(note.body) }}
+                      />
+                      {/* {note.body} */}
                     </pre>
                   </div>
                 ) : (

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { use, useState } from 'react';
 import { FileText, Image, User, LogOut } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../store/auth';
@@ -13,6 +13,8 @@ function Sidebar({ activeMenu, setActiveMenu }: SidebarProps) {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
+  console.log(localStorage.getItem("USER_EMAIL"));
+  const [emailUserLogin, setEmailUserLogin] = useState<string | null>(user?.email || localStorage.getItem("USER_EMAIL") ? JSON.parse(localStorage.getItem("USER_EMAIL")!).email : null);
 
   const menuItems = [
     { id: 'notes', icon: FileText, label: 'Notes', path: '/' },
@@ -88,12 +90,12 @@ function Sidebar({ activeMenu, setActiveMenu }: SidebarProps) {
 
       {/* User Info & Logout */}
       <div className="p-4 border-t border-gray-700/50">
-        {sidebarExpanded && user && (
+        {sidebarExpanded && emailUserLogin && (
           <div className="mb-3 px-3 py-2 bg-gray-700/50 rounded-lg">
             <div className="flex items-center space-x-2">
               <User className="w-4 h-4 text-gray-400" />
               <span className="text-sm text-gray-300 truncate">
-                {user.username || user.email || 'User'}
+                {emailUserLogin}
               </span>
             </div>
           </div>

@@ -1,4 +1,3 @@
-// src/store/notes.ts
 import { create } from "zustand";
 import apiClient from "../api/client";
 
@@ -38,6 +37,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
   error: null,
 
   fetchNotes: async () => {
+    if (get().loading) return;
     set({ loading: true, error: null });
     try {
       const data: any = await apiClient("/notes", "GET");

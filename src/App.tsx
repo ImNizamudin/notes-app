@@ -18,12 +18,32 @@ function PrivateRoute({ children, activeMenu }: { children: JSX.Element; activeM
   return token ? <MainLayout activeMenu={activeMenu}>{children}</MainLayout> : <Navigate to="/login" />;
 }
 
+function PublicRoute({ children }: { children: JSX.Element }) {
+  const token = useAuthStore((s) => s.accessToken);
+  return token ? <Navigate to="/" /> : children;
+}
+
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
+        <Route
+          path="/login"
+          element={
+            <PublicRoute>
+              <Login />
+            </PublicRoute>
+          }
+        />
+
+        <Route
+          path="/register"
+          element={
+            <PublicRoute>
+              <Register />
+            </PublicRoute>
+          }
+        />
         <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="/email-verified" element={<EmailVerified />} />
 
@@ -59,7 +79,6 @@ export default function App() {
             </PrivateRoute>
           }
         />
-        {/* Tambahkan route lainnya nanti */}
         <Route
           path="/media"
           element={
