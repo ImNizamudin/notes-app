@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { useNotesStore } from "../store/note";
-import { Edit3, Trash2, Tag, Clock } from "lucide-react";
+import { Edit3, Trash2, Tag, Clock, User } from "lucide-react";
 import { useState } from "react";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
@@ -14,13 +14,18 @@ interface Props {
         tags: string[];
         created_at?: string;
         updated_at?: string;
+        user_owner?: {
+            id: string;
+            username: string;
+            fullname: string;
+        };
     }
 }
 
 function NoteCard({ note }: Props) {
     const deleteNote = useNotesStore((state) => state.deleteNote);
     const [isDeleting, setIsDeleting] = useState(false);
-
+    
     const handleDelete = async () => {
         if (!confirm("Hapus catatan ini?")) return;
         
@@ -112,25 +117,40 @@ function NoteCard({ note }: Props) {
             )}
 
             {/* Footer */}
-            <div className="flex items-center justify-between pt-3 border-t border-gray-700">
-                <div className="flex items-center space-x-1 text-gray-500 text-xs">
-                    <Clock className="w-3 h-3" />
-                    <span>{formatDate(note.updated_at || note.created_at) || 'No date'}</span>
+            <div className="pt-3 border-t border-gray-700">
+                {/* Info bar */}
+                <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center space-x-4 text-xs text-gray-500">
+                    <div className="flex items-center space-x-1">
+                        <Clock className="w-3 h-3" />
+                        <span>{formatDate(note.updated_at || note.created_at) || 'No date'}</span>
+                    </div>
+                    
+                    <div className="w-px h-3 bg-gray-600"></div>
+                    
+                    <div className="flex items-center space-x-1">
+                        <User className="w-3 h-3" />
+                        <span className="max-w-20 truncate" title={note.user_owner?.fullname || note.user_owner?.username}>
+                        {note.user_owner?.fullname || note.user_owner?.username || 'Unknown'}
+                        </span>
+                    </div>
+                    </div>
                 </div>
                 
+                {/* Action buttons */}
                 <div className="flex space-x-2">
                     <Link 
-                        to={`/notes/${note.id}`}
-                        className="px-3 py-1.5 bg-gradient-to-r from-blue-600 to-blue-500 text-white text-sm rounded-lg hover:from-blue-700 hover:to-blue-600 transition-all duration-200 shadow-lg hover:shadow-blue-500/25"
+                    to={`/notes/${note.id}`}
+                    className="flex-1 text-center px-3 py-1.5 bg-gradient-to-r from-blue-600 to-blue-500 text-white text-sm rounded-lg hover:from-blue-700 hover:to-blue-600 transition-all duration-200 shadow-lg hover:shadow-blue-500/25"
                     >
-                        View
+                    View
                     </Link>
                     <button 
-                        onClick={handleDelete}
-                        disabled={isDeleting}
-                        className="px-3 py-1.5 bg-gradient-to-r from-red-600 to-red-500 text-white text-sm rounded-lg hover:from-red-700 hover:to-red-600 transition-all duration-200 shadow-lg hover:shadow-red-500/25 disabled:opacity-50"
+                    onClick={handleDelete}
+                    disabled={isDeleting}
+                    className="flex-1 text-center px-3 py-1.5 bg-gradient-to-r from-red-600 to-red-500 text-white text-sm rounded-lg hover:from-red-700 hover:to-red-600 transition-all duration-200 shadow-lg hover:shadow-red-500/25 disabled:opacity-50"
                     >
-                        {isDeleting ? 'Deleting...' : 'Delete'}
+                    {isDeleting ? 'Deleting...' : 'Delete'}
                     </button>
                 </div>
             </div>

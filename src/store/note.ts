@@ -6,8 +6,13 @@ export interface Note {
   title: string;
   body: string;
   tags: string[];
-  createdAt?: string;
-  updatedAt?: string;
+  created_at?: string;
+  updated_at?: string;
+  user_owner?: {
+    id: string | number;
+    username: string;
+    fullname: string;
+  }
   [k: string]: any;
 }
 

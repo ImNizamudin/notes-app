@@ -1,5 +1,5 @@
-import { useState, useRef } from "react";
-import { Upload, Image, File, X, CheckCircle, AlertCircle } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { Upload, Image, File, X, CheckCircle, AlertCircle, Download, Trash2, Eye, RefreshCw } from "lucide-react";
 import { apiClient } from "../api/client";
 
 interface UploadedFile {
@@ -11,14 +11,74 @@ interface UploadedFile {
   uploadedAt: string;
 }
 
+interface GalleryFile {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  uploader_id: number;
+  name: string;
+  path: string;
+  size: number;
+  mime: string;
+  tags: string[];
+  url?: string; // We'll construct the URL
+}
+
+interface GalleryResponse {
+  files: GalleryFile[];
+  total_maximum: number;
+  total_usage: number;
+  page: {
+    current_page: number;
+    total_data: number;
+    limit: number;
+    total_page: number;
+  };
+  meta: {
+    message: string;
+    code: number;
+  };
+}
+
 export default function Media() {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({});
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+  const [galleryFiles, setGalleryFiles] = useState<GalleryFile[]>([]);
+  const [loadingGallery, setLoadingGallery] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [storageInfo, setStorageInfo] = useState<{ total: number; used: number }>({ total: 0, used: 0 });
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Fetch gallery files on component mount
+  useEffect(() => {
+    fetchGalleryFiles();
+  }, []);
+
+  const fetchGalleryFiles = async () => {
+    setLoadingGallery(true);
+    try {
+      const response: GalleryResponse = await apiClient("/files/notes_app", "GET");
+      
+      // Construct full URLs for each file
+      const filesWithUrls = response.files.map(file => ({
+        ...file,
+        url: `${import.meta.env.VITE_API_URL}/upload/${file.path}/${file.name}`
+      }));
+      
+      setGalleryFiles(filesWithUrls);
+      setStorageInfo({
+        total: response.total_maximum,
+        used: response.total_usage
+      });
+    } catch (err: any) {
+      setError(err.response?.meta?.message || "Failed to fetch gallery files");
+    } finally {
+      setLoadingGallery(false);
+    }
+  };
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
@@ -35,8 +95,8 @@ export default function Media() {
 
   const handleUpload = async () => {
     if (selectedFiles.length === 0) {
-        setError("Please select at least one file to upload");
-        return;
+      setError("Please select at least one file to upload");
+      return;
     }
 
     setUploading(true);
@@ -44,61 +104,76 @@ export default function Media() {
     setSuccess(null);
 
     try {
-        const results: UploadedFile[] = [];
+      const results: UploadedFile[] = [];
 
-        for (let i = 0; i < selectedFiles.length; i++) {
-            const file = selectedFiles[i];
-            const fieldName = `thumbnail_${i + 1}`;
+      for (let i = 0; i < selectedFiles.length; i++) {
+        const file = selectedFiles[i];
+        const fieldName = `thumbnail_${i + 1}`;
 
-            try {
-                const formData = new FormData();
-                formData.append("fields", fieldName); // field text
-                formData.append(fieldName, file);     // file upload
+        try {
+          const formData = new FormData();
+          formData.append("fields", fieldName);
+          formData.append(fieldName, file);
 
-                
-                const response = await apiClient(
-                    "/files/notes_app/bulk-upload",
-                    "POST",
-                    formData
-                );
+          const response = await apiClient(
+            "/files/notes_app/bulk-upload",
+            "POST",
+            formData
+          );
 
-                // 🔹 Simulasi progress (karena fetch + FormData tidak ada progress event bawaan)
-                for (let progress = 0; progress <= 100; progress += 10) {
-                    setUploadProgress(prev => ({ ...prev, [file.name]: progress }));
-                    await new Promise(resolve => setTimeout(resolve, 50));
-                }
+          // Simulate progress
+          for (let progress = 0; progress <= 100; progress += 10) {
+            setUploadProgress(prev => ({ ...prev, [file.name]: progress }));
+            await new Promise(resolve => setTimeout(resolve, 50));
+          }
 
-                // 🔹 Ambil hasil dari response API
-                const uploadedFile: UploadedFile = {
-                    id: response?.id || `file-${Date.now()}-${i}`,
-                    name: file.name,
-                    url: response?.url || URL.createObjectURL(file),
-                    size: file.size,
-                    type: file.type,
-                    uploadedAt: new Date().toISOString(),
-                };
+          const uploadedFile: UploadedFile = {
+            id: response?.id || `file-${Date.now()}-${i}`,
+            name: file.name,
+            url: response?.url || URL.createObjectURL(file),
+            size: file.size,
+            type: file.type,
+            uploadedAt: new Date().toISOString(),
+          };
 
-                results.push(uploadedFile);
-            } catch (fileError: any) {
-                console.error(`Error uploading ${file.name}:`, fileError);
-                setError(
-                `Failed to upload ${file.name}: ${
-                    fileError.response?.meta?.message || fileError.message
-                }`
-                );
-            }
+          results.push(uploadedFile);
+        } catch (fileError: any) {
+          console.error(`Error uploading ${file.name}:`, fileError);
+          setError(
+            `Failed to upload ${file.name}: ${
+              fileError.response?.meta?.message || fileError.message
+            }`
+          );
         }
+      }
 
-        setUploadedFiles(prev => [...prev, ...results]);
-        setSelectedFiles([]);
-        setSuccess(`Successfully uploaded ${results.length} file(s)`);
+      setUploadedFiles(prev => [...prev, ...results]);
+      setSelectedFiles([]);
+      setSuccess(`Successfully uploaded ${results.length} file(s)`);
+      
+      // Refresh gallery after upload
+      await fetchGalleryFiles();
     } catch (err: any) {
-        setError(err.response?.meta?.message || "Failed to upload files");
+      setError(err.response?.meta?.message || "Failed to upload files");
     } finally {
-        setUploading(false);
-        setUploadProgress({});
+      setUploading(false);
+      setUploadProgress({});
     }
-    };
+  };
+
+  const handleDeleteFile = async (fileId: string, fileName: string) => {
+    if (!confirm(`Are you sure you want to delete "${fileName}"?`)) return;
+
+    try {
+      await apiClient(`/files/notes_app/${fileId}`, "DELETE");
+      setSuccess(`File "${fileName}" deleted successfully`);
+      
+      // Refresh gallery after delete
+      await fetchGalleryFiles();
+    } catch (err: any) {
+      setError(err.response?.meta?.message || "Failed to delete file");
+    }
+  };
 
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
@@ -108,23 +183,53 @@ export default function Media() {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  const getFileIcon = (type: string) => {
-    if (type.startsWith('image/')) return <Image className="w-5 h-5" />;
+  const formatStoragePercentage = (used: number, total: number) => {
+    if (total === 0) return '0%';
+    const percentage = (used / total) * 100;
+    return `${percentage.toFixed(1)}%`;
+  };
+
+  const getFileIcon = (mimeType: string) => {
+    if (mimeType.startsWith('image/')) return <Image className="w-5 h-5" />;
+    if (mimeType.startsWith('video/')) return <File className="w-5 h-5" />;
+    if (mimeType.startsWith('audio/')) return <File className="w-5 h-5" />;
     return <File className="w-5 h-5" />;
+  };
+
+  const isImageFile = (mimeType: string) => {
+    return mimeType.startsWith('image/');
   };
 
   return (
     <div className="min-h-screen bg-gray-900">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="bg-gradient-to-r from-gray-800 to-gray-900 border border-gray-700 rounded-xl shadow-xl p-6 mb-6">
-          <div className="flex items-center space-x-3">
-            <div className="w-12 h-12 bg-gradient-to-r from-purple-600 to-purple-500 rounded-xl flex items-center justify-center">
-              <Image className="w-6 h-6 text-white" />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-12 h-12 bg-gradient-to-r from-purple-600 to-purple-500 rounded-xl flex items-center justify-center">
+                <Image className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-100">Media Library</h1>
+                <p className="text-gray-400">Upload and manage your media files</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-100">Media Library</h1>
-              <p className="text-gray-400">Upload and manage your media files</p>
+            
+            {/* Storage Info */}
+            <div className="text-right">
+              <div className="text-sm text-gray-300">
+                Storage: {formatFileSize(storageInfo.used)} / {formatFileSize(storageInfo.total)}
+              </div>
+              <div className="w-32 h-2 bg-gray-600 rounded-full mt-1">
+                <div 
+                  className="h-2 bg-blue-500 rounded-full transition-all"
+                  style={{ width: formatStoragePercentage(storageInfo.used, storageInfo.total) }}
+                ></div>
+              </div>
+              <div className="text-xs text-gray-400 mt-1">
+                {formatStoragePercentage(storageInfo.used, storageInfo.total)} used
+              </div>
             </div>
           </div>
         </div>
@@ -249,10 +354,132 @@ export default function Media() {
           </div>
         )}
 
-        {/* Uploaded Files */}
+        {/* Gallery Section */}
+        <div className="bg-gray-800 border border-gray-700 rounded-xl shadow-xl p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-lg font-semibold text-gray-100">
+              Your Files ({galleryFiles.length})
+            </h2>
+            <button
+              onClick={fetchGalleryFiles}
+              disabled={loadingGallery}
+              className="flex items-center space-x-2 px-3 py-1 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 disabled:opacity-50"
+            >
+              <RefreshCw className={`w-4 h-4 ${loadingGallery ? 'animate-spin' : ''}`} />
+              <span>Refresh</span>
+            </button>
+          </div>
+
+          {loadingGallery ? (
+            <div className="flex justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+            </div>
+          ) : galleryFiles.length === 0 ? (
+            <div className="text-center py-12 text-gray-400">
+              <Image className="w-16 h-16 mx-auto mb-4 opacity-50" />
+              <p>No files found. Upload some files to get started!</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {galleryFiles.map((file) => (
+                <div key={file.id} className="bg-gray-700 rounded-lg p-3 group relative">
+                  {/* File Preview */}
+                  {isImageFile(file.mime) ? (
+                    <div className="relative">
+                      <img
+                        src={`https://minio-s3.radarku.online/radarku-bucket/${file.path}/${file.name}`}
+                        alt={file.name}
+                        className="w-full h-32 object-cover rounded-lg mb-2"
+                        loading="lazy"
+                      />
+                      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all duration-200 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100">
+                        <a
+                          href={`https://minio-s3.radarku.online/radarku-bucket/${file.path}/${file.name}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-2 bg-white bg-opacity-20 rounded-full mr-2 hover:bg-opacity-30"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Eye className="w-4 h-4 text-white" />
+                        </a>
+                        <a
+                          href={`https://minio-s3.radarku.online/radarku-bucket/${file.path}/${file.name}`}
+                          download={file.name}
+                          className="p-2 bg-white bg-opacity-20 rounded-full mr-2 hover:bg-opacity-30"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Download className="w-4 h-4 text-white" />
+                        </a>
+                        <button
+                          onClick={() => handleDeleteFile(file.id, file.name)}
+                          className="p-2 bg-white bg-opacity-20 rounded-full hover:bg-opacity-30"
+                        >
+                          <Trash2 className="w-4 h-4 text-white" />
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="w-full h-32 bg-gray-600 rounded-lg flex items-center justify-center mb-2">
+                      {getFileIcon(file.mime)}
+                    </div>
+                  )}
+
+                  {/* File Info */}
+                  <div className="flex items-center space-x-2 mb-2">
+                    {getFileIcon(file.mime)}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-gray-100 text-sm font-medium truncate">
+                        {file.name.split('/').pop()}
+                      </p>
+                      <p className="text-gray-400 text-xs">{formatFileSize(file.size)}</p>
+                    </div>
+                  </div>
+
+                  {/* File Metadata */}
+                  <div className="text-xs text-gray-400 space-y-1">
+                    <p>Uploaded: {new Date(file.created_at).toLocaleDateString()}</p>
+                    <p>Type: {file.mime}</p>
+                  </div>
+
+                  {/* Action Buttons for non-image files */}
+                  {!isImageFile(file.mime) && (
+                    <div className="flex justify-between items-center mt-2 pt-2 border-t border-gray-600">
+                      <a
+                        href={file.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-400 hover:text-blue-300 text-xs flex items-center"
+                      >
+                        <Eye className="w-3 h-3 mr-1" />
+                        View
+                      </a>
+                      <a
+                        href={file.url}
+                        download={file.name}
+                        className="text-green-400 hover:text-green-300 text-xs flex items-center"
+                      >
+                        <Download className="w-3 h-3 mr-1" />
+                        Download
+                      </a>
+                      <button
+                        onClick={() => handleDeleteFile(file.id, file.name)}
+                        className="text-red-400 hover:text-red-300 text-xs flex items-center"
+                      >
+                        <Trash2 className="w-3 h-3 mr-1" />
+                        Delete
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Recently Uploaded Files */}
         {uploadedFiles.length > 0 && (
-          <div className="bg-gray-800 border border-gray-700 rounded-xl shadow-xl p-6">
-            <h2 className="text-lg font-semibold text-gray-100 mb-4">Uploaded Files ({uploadedFiles.length})</h2>
+          <div className="bg-gray-800 border border-gray-700 rounded-xl shadow-xl p-6 mt-6">
+            <h2 className="text-lg font-semibold text-gray-100 mb-4">Recently Uploaded ({uploadedFiles.length})</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {uploadedFiles.map((file, index) => (
                 <div key={index} className="bg-gray-700 rounded-lg p-3">

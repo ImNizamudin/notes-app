@@ -1,53 +1,76 @@
 import { useEffect, useState } from "react";
-import Navbar from "../components/Navbar";
 import { useNotesStore, type Note } from "../store/note";
+import { useCollaborationStore } from "../store/collaboration";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { Edit3, Trash2, ArrowLeft, Calendar, Tag, FileText } from "lucide-react";
+import { Edit3, Trash2, ArrowLeft, Calendar, Tag, FileText, User, MessageCircle, Send, X, Type } from "lucide-react";
 import DOMPurify from "dompurify";
-import ReactQuill from "react-quill";
-import "react-quill/dist/quill.snow.css";
-
 
 function NoteDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const getNote = useNotesStore((s) => s.getNote);
   const fetchNoteById = useNotesStore((s) => s.fetchNoteById);
   const deleteNote = useNotesStore((s) => s.deleteNote);
+
+  const {
+    collaborations, // Gunakan collaborations dari store, bukan dari note
+    loading: collaborationsLoading, 
+    addOrUpdateComment, 
+    deleteComment,
+    fetchCollaborations // Tambahkan fungsi untuk fetch collaborations
+  } = useCollaborationStore();
 
   const [note, setNote] = useState<Note | null>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  
+  // State untuk komentar
+  const [newComment, setNewComment] = useState("");
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editCommentText, setEditCommentText] = useState("");
+
+  // Filter hanya komentar yang memiliki body
+  const collaborationsComment = collaborations.filter((c) => c.body);
 
   useEffect(() => {
-    if (!id) return;
-    const local = getNote(id);
-    // console.log("Local note:", local);
-
-    
-    if (local) {
-      setNote(local);
+    if (!id) {
+      setErr("Note ID is required");
       setLoading(false);
-    } else {
-      fetchNoteById(id)
-        .then((data) => setNote(data))
-        .catch((e) => setErr(e.message || "Gagal memuat note"))
-        .finally(() => setLoading(false));
+      return;
     }
-  }, [id]);
-  // }, [id, getNote, fetchNoteById]);
+
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        setErr(null);
+        
+        // Load note data
+        const noteData = await fetchNoteById(id);
+        setNote(noteData);
+        
+        // Load collaborations data
+        await fetchCollaborations(parseInt(id));
+      } catch (error: any) {
+        setErr(error.message || "Failed to load note");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, [id, fetchNoteById, fetchCollaborations]);
 
   const onDelete = async () => {
     if (!id) return;
-    if (!confirm("Hapus note ini?")) return;
+    if (!confirm("Are you sure you want to delete this note?")) return;
+    
     setDeleting(true);
     try {
       await deleteNote(id);
       navigate("/");
-    } catch (e: any) {
-      setErr(e.message || "Gagal menghapus note");
+    } catch (error: any) {
+      setErr(error.message || "Failed to delete note");
       setDeleting(false);
     }
   };
@@ -67,10 +90,44 @@ function NoteDetail() {
     }
   };
 
+  // Fungsi untuk menambah komentar
+  const handleAddComment = async () => {
+    if (!id || !newComment.trim()) return;
+    
+    try {
+      await addOrUpdateComment(parseInt(id), newComment);
+      setNewComment("");
+      // Tidak perlu memanggil fetchCollaborations lagi karena store sudah otomatis update
+    } catch (error) {
+      // Error sudah dihandle oleh store
+    }
+  };
+
+  const handleEditComment = async () => {
+    if (!editCommentText.trim()) return;
+    if (!id) return;
+    
+    try {
+      await addOrUpdateComment(parseInt(id), editCommentText);
+      setEditingCommentId(null);
+      setEditCommentText("");
+    } catch (error) {
+      // Error sudah dihandle oleh store
+    }
+  };
+
+  const handleDeleteComment = async (collabId: string) => {
+    if (!confirm("Apakah Anda yakin ingin menghapus komentar ini?")) return;
+    
+    try {
+      await deleteComment(collabId);
+    } catch (error) {
+      // Error sudah dihandle oleh store
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-900">
-      {/* <Navbar /> */}
-      
       {/* Header */}
       <div className="bg-gradient-to-r from-gray-800 to-gray-900 border-b border-gray-700">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -128,6 +185,12 @@ function NoteDetail() {
                           <span>Created: {formatDate(note.created_at)}</span>
                         </div>
                       )}
+                      {note.user_owner?.fullname && (
+                        <div className="flex items-center space-x-1">
+                          <User className="w-4 h-4" />
+                          <span>Author: {note.user_owner.fullname}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                   
@@ -146,7 +209,7 @@ function NoteDetail() {
                       className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-red-600 to-red-500 text-white rounded-lg hover:from-red-700 hover:to-red-600 transition-all duration-200 shadow-lg hover:shadow-red-500/25 disabled:opacity-50"
                     >
                       <Trash2 className="w-4 h-4" />
-                      <span>{deleting ? "Menghapus..." : "Hapus"}</span>
+                      <span>{deleting ? "Deleting..." : "Delete"}</span>
                     </button>
                   </div>
                 </div>
@@ -168,15 +231,18 @@ function NoteDetail() {
               </div>
 
               {/* Note Content */}
-              <div className="p-6">
+              <div className="p-6 border-b border-gray-700">
                 {note.body ? (
                   <div className="prose prose-invert max-w-none">
+                    <div className="mb-4 text-sm text-gray-400 flex items-center">
+                      <User className="w-4 h-4 mr-2" />
+                      <span>Created by: {note.user_owner?.fullname || 'Unknown author'}</span>
+                    </div>
                     <pre className="whitespace-pre-wrap text-gray-300 leading-relaxed font-sans">
                       <div 
                         className="ql-editor"
                         dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(note.body) }}
                       />
-                      {/* {note.body} */}
                     </pre>
                   </div>
                 ) : (
@@ -184,8 +250,131 @@ function NoteDetail() {
                     <FileText className="w-12 h-12 text-gray-600 mx-auto mb-4" />
                     <p className="text-gray-400 text-lg">This note is empty</p>
                     <p className="text-gray-500 text-sm mt-2">Click Edit to add content</p>
+                    {note.user_owner?.fullname && (
+                      <div className="mt-4 text-sm text-gray-500 flex items-center justify-center">
+                        <User className="w-4 h-4 mr-2" />
+                        <span>Created by: {note.user_owner.fullname}</span>
+                      </div>
+                    )}
                   </div>
                 )}
+              </div>
+
+              {/* Comments Section */}
+              <div className="p-6">
+                <div className="flex items-center space-x-2 mb-4">
+                  <MessageCircle className="w-5 h-5 text-gray-400" />
+                  <h3 className="text-lg font-medium text-gray-300">Comments</h3>
+                  <span className="bg-blue-600 text-white text-sm px-2 py-1 rounded-full">
+                    {collaborationsComment.length}
+                  </span>
+                  {collaborationsLoading && (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
+                  )}
+                </div>
+
+                {/* Add Comment Form */}
+                <div className="mb-6">
+                  <div className="flex space-x-2">
+                    <input
+                      type="text"
+                      value={newComment}
+                      onChange={(e) => setNewComment(e.target.value)}
+                      placeholder="Add a comment..."
+                      className="flex-1 bg-gray-700 border border-gray-600 text-gray-100 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      disabled={collaborationsLoading}
+                    />
+                    <button
+                      onClick={handleAddComment}
+                      disabled={!newComment.trim() || collaborationsLoading}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                    >
+                      {collaborationsLoading ? (
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      ) : (
+                        <Send className="w-4 h-4" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Comments List */}
+                <div className="space-y-4">
+                  {collaborationsComment.map((collab) => {
+                    return (
+                      <div key={collab.id} className="bg-gray-700 rounded-lg p-4">
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex items-center space-x-2">
+                            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+                              <span className="text-white text-sm font-medium">
+                                {collab.user?.username?.charAt(0)?.toUpperCase() || 'U'}
+                              </span>
+                            </div>
+                            <div>
+                              <p className="text-gray-100 font-medium">
+                                {collab.user?.fullname || collab.user?.username || 'Unknown User'}
+                              </p>
+                              <p className="text-gray-400 text-sm">
+                                {formatDate(collab.created_at)}
+                              </p>
+                            </div>
+                          </div>
+                          
+                          {/* Edit/Delete Buttons (hanya untuk pemilik komentar) */}
+                          <div className="flex space-x-1">
+                            <button
+                              onClick={() => {
+                                setEditingCommentId(collab.id);
+                                setEditCommentText(collab.body || '');
+                              }}
+                              className="text-gray-400 hover:text-blue-400 p-1"
+                            >
+                              <Type className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteComment(collab.id)}
+                              className="text-gray-400 hover:text-red-400 p-1"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {editingCommentId === collab.id ? (
+                          <div className="flex space-x-2 mt-2">
+                            <input
+                              type="text"
+                              value={editCommentText}
+                              onChange={(e) => setEditCommentText(e.target.value)}
+                              className="flex-1 bg-gray-600 border border-gray-500 text-gray-100 rounded-lg px-3 py-1"
+                            />
+                            <button
+                              onClick={handleEditComment}
+                              className="px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-500"
+                            >
+                              Save
+                            </button>
+                            <button
+                              onClick={() => setEditingCommentId(null)}
+                              className="px-3 py-1 bg-gray-600 text-gray-300 rounded-lg hover:bg-gray-500"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <p className="text-gray-300">{collab.body}</p>
+                        )}
+                      </div>
+                    )
+                  })}
+
+                  {collaborationsComment.length === 0 && (
+                    <div className="text-center py-8 text-gray-400">
+                      <MessageCircle className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                      <p>No comments yet. Be the first to comment!</p>
+                    </div>
+                  )}
+                </div>
               </div>
             </>
           ) : (

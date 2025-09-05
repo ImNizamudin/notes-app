@@ -13,7 +13,7 @@ function Sidebar({ activeMenu, setActiveMenu }: SidebarProps) {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
-  console.log(localStorage.getItem("USER_EMAIL"));
+  
   const [emailUserLogin, setEmailUserLogin] = useState<string | null>(user?.email || localStorage.getItem("USER_EMAIL") ? JSON.parse(localStorage.getItem("USER_EMAIL")!).email : null);
 
   const menuItems = [
