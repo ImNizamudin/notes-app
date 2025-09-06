@@ -22,7 +22,7 @@ interface AuthState {
   error: string | null;
 
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, fullname: string) => Promise<void>;
+  register: (email: string, password: string, fullname: string) => Promise<{ success: boolean; message: any; data: any; }>;
   logout: () => void;
   loadFromStorage: () => void;
   setUser: (user: UserInfo) => void;
