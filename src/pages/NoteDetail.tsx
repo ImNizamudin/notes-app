@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNotesStore, type Note } from "../store/note";
 import { useCollaborationStore } from "../store/collaboration";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { Edit3, Trash2, ArrowLeft, Calendar, Tag, FileText, User, MessageCircle, Send, X, Type } from "lucide-react";
+import { Edit3, Trash2, ArrowLeft, Calendar, Tag, FileText, User, MessageCircle, Send, X, Type, ImageIcon, Eye } from "lucide-react";
 import DOMPurify from "dompurify";
 
 function NoteDetail() {
@@ -232,12 +232,40 @@ function NoteDetail() {
 
               {/* Note Content */}
               <div className="p-6 border-b border-gray-700">
+                <div className="mb-4 text-sm text-gray-400 flex items-center">
+                  <User className="w-4 h-4 mr-2" />
+                  <span>Created by: {note.user_owner?.fullname || 'Unknown author'}</span>
+                </div>
+
+                {/* Thumbnail */}
+                {note.thumbnail && (
+                  <div className="mb-6 rounded-lg overflow-hidden border border-gray-600 relative">
+
+                    <div className="flex items-center space-x-2 bg-gray-700 px-4 py-2">
+                      <ImageIcon className="w-4 h-4 text-gray-400" />
+                      <span className="text-sm text-gray-300">Thumbnail</span>
+                    </div>
+
+                      <a
+                        href={`https://minio-s3.radarku.online/radarku-bucket/notes_app/${note.thumbnail}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="absolute top-[0px] right-2 p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full"
+                        title="View image in new tab"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </a>
+
+                    <img 
+                      src={`https://minio-s3.radarku.online/radarku-bucket/notes_app/${note.thumbnail}`}
+                      alt="Note thumbnail"
+                      className="w-full h-64 object-cover"
+                    />
+                  </div>
+                )}
+
                 {note.body ? (
                   <div className="prose prose-invert max-w-none">
-                    <div className="mb-4 text-sm text-gray-400 flex items-center">
-                      <User className="w-4 h-4 mr-2" />
-                      <span>Created by: {note.user_owner?.fullname || 'Unknown author'}</span>
-                    </div>
                     <pre className="whitespace-pre-wrap text-gray-300 leading-relaxed font-sans">
                       <div 
                         className="ql-editor"

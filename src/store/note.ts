@@ -6,6 +6,7 @@ export interface Note {
   title: string;
   body: string;
   tags: string[];
+  thumbnail?: string; // Tambahkan properti thumbnail
   created_at?: string;
   updated_at?: string;
   user_owner?: {
@@ -27,10 +28,11 @@ interface NotesState {
     title: string;
     body: string;
     tags?: string[];
+    thumbnail?: string; // Tambahkan thumbnail di payload
   }) => Promise<void>;
   updateNote: (
     note_id: string | number,
-    payload: { title: string; body: string; tags?: string[] }
+    payload: { title: string; body: string; tags?: string[]; thumbnail?: string } // Tambahkan thumbnail
   ) => Promise<void>;
   deleteNote: (note_id: string | number) => Promise<void>;
   getNote: (note_id: string | number) => Note | undefined;
@@ -110,7 +112,10 @@ export const useNotesStore = create<NotesState>((set, get) => ({
     set({ loading: true, error: null });
     try {
       await apiClient(`/notes/${note_id}`, "DELETE");
-      await get().fetchNotes();
+      set((state) => ({
+        notes: state.notes.filter((n) => String(n.id) !== String(note_id)),
+        loading: false,
+      }));
     } catch (err: any) {
       set({ error: err.message || "Failed to delete note", loading: false });
       throw err;

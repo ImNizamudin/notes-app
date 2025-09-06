@@ -104,7 +104,7 @@ function Sidebar({ activeMenu, setActiveMenu }: SidebarProps) {
           onClick={handleLogout}
           className="w-full flex items-center space-x-3 px-3 py-3 text-gray-400 hover:text-red-400 hover:bg-gray-700/50 rounded-xl transition-all duration-200"
         >
-          <LogOut className="w-5 h-5 flex-shrink-0" />
+          <LogOut className="w-4 h-4 flex-shrink-0" />
           {sidebarExpanded && (
             <span className="font-medium whitespace-nowrap">Logout</span>
           )}

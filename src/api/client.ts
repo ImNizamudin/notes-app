@@ -144,6 +144,7 @@ export async function apiClient(
   // cek token expired
   if (accessToken && isTokenExpired(accessToken)) {
     await showSessionExpiredAlert();
+    logout();
     throw new Error("Session expired. Please log in again.");
   }
 
