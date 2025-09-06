@@ -14,7 +14,7 @@ function Sidebar({ activeMenu, setActiveMenu }: SidebarProps) {
   const navigate = useNavigate();
   const location = useLocation();
   
-  const [emailUserLogin, setEmailUserLogin] = useState<string | null>(user?.email || localStorage.getItem("USER_EMAIL") ? JSON.parse(localStorage.getItem("USER_EMAIL")!).email : null);
+  const [emailUserLogin, setEmailUserLogin] = useState<string | null>(user?.email || localStorage.getItem("USER") ? JSON.parse(localStorage.getItem("USER")!).email : null);
 
   const menuItems = [
     { id: 'notes', icon: FileText, label: 'Notes', path: '/' },
@@ -24,7 +24,6 @@ function Sidebar({ activeMenu, setActiveMenu }: SidebarProps) {
 
   const handleLogout = () => {
     logout();
-    navigate('/login');
   };
 
   const handleMenuClick = (item: any) => {

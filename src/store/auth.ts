@@ -21,7 +21,8 @@ interface AuthState {
   loading: boolean;
   error: string | null;
 
-  login: (username: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string, fullname: string) => Promise<void>;
   logout: () => void;
   loadFromStorage: () => void;
   setUser: (user: UserInfo) => void;
@@ -72,7 +73,8 @@ export const useAuthStore = create<AuthState>((set) => ({
       if (refreshToken) localStorage.setItem("REFRESH_TOKEN", refreshToken);
 
       const userData = data.user ? data.user : { email };
-      localStorage.setItem("USER_EMAIL", JSON.stringify(userData));
+      localStorage.setItem("USER", JSON.stringify(userData));
+      localStorage.removeItem("USER_EMAIL");
 
       set({ accessToken, refreshToken, loading: false, user: userData, error: null });
     } catch (err: any) {
@@ -89,12 +91,57 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 
+  async register(email, password, fullname) {
+    set({ loading: true, error: null });
+    try {
+      const data: any = await apiClient("/auths/register", "POST", {
+        email,
+        password,
+        fullname
+      });
+
+      // Handle response dari register
+      // Biasanya register tidak langsung login, jadi tidak set token di sini
+      const successMessage = data?.meta?.message || "Registration successful";
+      
+      set({ loading: false, error: null });
+      
+      // Return data untuk bisa digunakan di component
+      return { success: true, message: successMessage, data };
+    } catch (err: any) {
+      let errorMessage = "Registration failed";
+
+      if (err.response) {
+        errorMessage = err.response.meta?.message || errorMessage;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+
+      set({ error: errorMessage, loading: false });
+      throw new Error(errorMessage);
+    }
+  },
+
   logout() {
+    // Hapus semua item localStorage terkait auth
     localStorage.removeItem("ACCESS_TOKEN");
     localStorage.removeItem("REFRESH_TOKEN");
     localStorage.removeItem("USER");
     localStorage.removeItem("USER_EMAIL");
-    set({ accessToken: null, refreshToken: null, user: null });
+    
+    // Reset state ke null
+    set({ 
+      accessToken: null, 
+      refreshToken: null, 
+      user: null,
+      error: null,
+      loading: false 
+    });
+    
+    // Redirect ke halaman login setelah logout
+    if (window.location.pathname !== '/login') {
+      window.location.href = '/login';
+    }
   },
 
   async fetchUserProfile() {
@@ -112,6 +159,13 @@ export const useAuthStore = create<AuthState>((set) => ({
       set({ user: userData, loading: false, error: null });
     } catch (err: any) {
       console.error("Error fetching user profile:", err);
+      
+      // Jika error 401 (Unauthorized), logout user
+      if (err.response?.status === 401 || err.message?.includes("Unauthorized")) {
+        useAuthStore.getState().logout();
+      } else {
+        set({ loading: false, error: err.message || "Failed to fetch user profile" });
+      }
     }
   },
 }));

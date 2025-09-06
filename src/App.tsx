@@ -12,9 +12,62 @@ import VerifyEmail from "./pages/VerifyEmail";
 import type { JSX } from "react";
 import Profile from "./pages/Profile";
 import Media from "./pages/Media";
+import { useEffect } from "react";
+
+function setupGlobalErrorHandling() {
+  const originalErrorHandler = window.onerror;
+  const originalPromiseHandler = window.onunhandledrejection;
+
+  window.onerror = function (message, source, lineno, colno, error) {
+    if (message.toString().includes("Token expired") ||
+        message.toString().includes("Unauthorized")) {
+      useAuthStore.getState().logout();
+    }
+
+    if (originalErrorHandler) {
+      return originalErrorHandler.call(this, message, source, lineno, colno, error);
+    }
+
+    return false;
+  }
+
+  window.onunhandledrejection = function (event) {
+    if (event.reason?.message?.includes("Token expired") ||
+        event.reason?.message?.includes("Unauthorized") ||
+        event.reason?.response?.status === 401) {
+      useAuthStore.getState().logout();
+    }
+
+    if (originalPromiseHandler) {
+      return originalPromiseHandler?.call(this as Window, event);
+    }
+
+    return false;
+  }
+}
 
 function PrivateRoute({ children, activeMenu }: { children: JSX.Element; activeMenu?: string }) {
   const token = useAuthStore((s) => s.accessToken);
+  const logout = useAuthStore((s) => s.logout);
+
+  useEffect(() => {
+    const checkTokenExpiry = () => {
+      const token = localStorage.getItem("ACCESS_TOKEN");
+      if (token) {
+        try {
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          const exp = payload.exp * 1000;
+          if (Date.now() >= exp) { 
+            logout;
+          }
+        } catch {
+          logout;
+        }
+      }
+    };
+
+  }, [logout]);
+
   return token ? <MainLayout activeMenu={activeMenu}>{children}</MainLayout> : <Navigate to="/login" />;
 }
 
@@ -24,6 +77,10 @@ function PublicRoute({ children }: { children: JSX.Element }) {
 }
 
 export default function App() {
+  useEffect(() => {
+    setupGlobalErrorHandling();
+  }, []);
+
   return (
     <BrowserRouter>
       <Routes>

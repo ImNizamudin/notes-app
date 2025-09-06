@@ -1,17 +1,19 @@
 import { useState } from "react";
-import { apiClient } from "../api/client";
+import { useAuthStore } from "../store/auth";
 import { Link, useNavigate } from "react-router-dom";
 import { User, Lock, UserPlus, Eye, EyeOff, Mail } from "lucide-react";
 
 export default function Register() {
   const navigate = useNavigate();
+  const register = useAuthStore((state) => state.register);
+  const loading = useAuthStore((state) => state.loading);
+  const error = useAuthStore((state) => state.error);
+  
   const [form, setForm] = useState({
-    email: "", // Ganti username menjadi email
+    email: "",
     password: "",
     fullname: "",
   });
-  const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
 
   const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -20,20 +22,14 @@ export default function Register() {
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErr(null);
-    setLoading(true);
     try {
-      // Kirim ke endpoint baru dengan struktur data yang benar
-      await apiClient("/auths/register", "POST", {
-        email: form.email,
-        password: form.password,
-        fullname: form.fullname
-      });
+      // Gunakan fungsi register dari auth store
+      await register(form.email, form.password, form.fullname);
+      navigate(`/verify-email?email=${encodeURIComponent(form.email)}`);
       navigate(`/verify-email?email=${encodeURIComponent(form.email)}`);
     } catch (e: any) {
-      setErr(e.message || "Registrasi gagal");
-    } finally {
-      setLoading(false);
+      // Error sudah dihandle oleh store, tidak perlu set error lagi di sini
+      console.error("Registration error:", e);
     }
   };
 
@@ -84,7 +80,7 @@ export default function Register() {
               </div>
             </div>
 
-            {/* Email Field (menggantikan username) */}
+            {/* Email Field */}
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-300">
                 Email
@@ -118,6 +114,7 @@ export default function Register() {
                   value={form.password}
                   onChange={onChange}
                   required
+                  minLength={8}
                 />
                 <button
                   type="button"
@@ -135,9 +132,9 @@ export default function Register() {
             </div>
 
             {/* Error Message */}
-            {err && (
+            {error && (
               <div className="bg-red-900/50 border border-red-700 text-red-200 px-4 py-3 rounded-xl">
-                <p className="text-sm">{err}</p>
+                <p className="text-sm">{error}</p>
               </div>
             )}
 
