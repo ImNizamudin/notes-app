@@ -8,6 +8,7 @@ import NoteDetail from "./pages/NoteDetail";
 import { useAuthStore } from "./store/auth";
 import MainLayout from "./layouts/MainLayout";
 import EmailVerified from "./pages/EmailVerified";
+import VerifyEmailNotification from "./pages/VerifyEmailNotification";
 import VerifyEmail from "./pages/VerifyEmail";
 import type { JSX } from "react";
 import Profile from "./pages/Profile";
@@ -101,7 +102,9 @@ export default function App() {
             </PublicRoute>
           }
         />
+        <Route path="/verify-email/notification" element={<VerifyEmailNotification />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
+
         <Route path="/email-verified" element={<EmailVerified />} />
 
         <Route
