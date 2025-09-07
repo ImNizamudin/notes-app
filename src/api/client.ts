@@ -1,8 +1,4 @@
-// const BASE_URL =
-//   import.meta.env.VITE_API_BASE_URL || "https://dev-notesapp.radarku.online";
-// const BASE_URL = "/api";
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
-
 
 // modal confirm
 function showSessionExpiredAlert(): Promise<void> {

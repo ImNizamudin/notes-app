@@ -22,4 +22,3 @@ export default ({ mode }: { mode: string }) => {
 
 // npm install --save-dev @types/node
 // npx vite build --mode production
-
