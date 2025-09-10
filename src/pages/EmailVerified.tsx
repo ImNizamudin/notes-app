@@ -1,18 +1,27 @@
 import { useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { CheckCircle, Mail, LogIn } from "lucide-react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import { CheckCircle, Mail, LogIn, Home } from "lucide-react";
 
 export default function EmailVerified() {
   const navigate = useNavigate();
+  const location = useLocation();
+  
+  // Ambil data dari state navigation
+  const hasToken = location.state?.hasToken || false;
+  const message = location.state?.message || "Your email has been successfully verified.";
 
   useEffect(() => {
     // Redirect otomatis setelah 5 detik
     const timer = setTimeout(() => {
-      navigate("/login");
+      if (hasToken) {
+        navigate("/"); // Redirect ke home jika sudah login otomatis
+      } else {
+        navigate("/login"); // Redirect ke login jika belum login
+      }
     }, 5000);
 
     return () => clearTimeout(timer);
-  }, [navigate]);
+  }, [navigate, hasToken]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center p-4">
@@ -39,10 +48,13 @@ export default function EmailVerified() {
 
           {/* Message */}
           <p className="text-gray-300 mb-2">
-            Your email has been successfully verified.
+            {message}
           </p>
           <p className="text-gray-400 text-sm mb-6">
-            You will be redirected to login page in 5 seconds...
+            {hasToken 
+              ? "You will be redirected to home page in 5 seconds..."
+              : "You will be redirected to login page in 5 seconds..."
+            }
           </p>
 
           {/* Progress Bar */}
@@ -52,21 +64,43 @@ export default function EmailVerified() {
 
           {/* Action Buttons */}
           <div className="space-y-3">
-            <Link
-              to="/login"
-              className="w-full flex items-center justify-center space-x-2 px-6 py-3 bg-gradient-to-r from-green-600 to-green-500 text-white rounded-xl hover:from-green-700 hover:to-green-600 transition-all duration-200 shadow-lg hover:shadow-green-500/25"
-            >
-              <LogIn className="w-5 h-5" />
-              <span>Go to Login</span>
-            </Link>
-
-            <Link
-              to="/"
-              className="w-full flex items-center justify-center space-x-2 px-6 py-3 text-gray-400 hover:text-gray-200 hover:bg-gray-700/50 rounded-xl transition-all duration-200"
-            >
-              <Mail className="w-5 h-5" />
-              <span>Back to Home</span>
-            </Link>
+            {hasToken ? (
+              // Jika sudah login otomatis (punya token)
+              <>
+                <Link
+                  to="/"
+                  className="w-full flex items-center justify-center space-x-2 px-6 py-3 bg-gradient-to-r from-green-600 to-green-500 text-white rounded-xl hover:from-green-700 hover:to-green-600 transition-all duration-200 shadow-lg hover:shadow-green-500/25"
+                >
+                  <Home className="w-5 h-5" />
+                  <span>Go to Home</span>
+                </Link>
+                <Link
+                  to="/login"
+                  className="w-full flex items-center justify-center space-x-2 px-6 py-3 text-gray-400 hover:text-gray-200 hover:bg-gray-700/50 rounded-xl transition-all duration-200"
+                >
+                  <LogIn className="w-5 h-5" />
+                  <span>Login with Different Account</span>
+                </Link>
+              </>
+            ) : (
+              // Jika belum login otomatis (tidak punya token)
+              <>
+                <Link
+                  to="/login"
+                  className="w-full flex items-center justify-center space-x-2 px-6 py-3 bg-gradient-to-r from-green-600 to-green-500 text-white rounded-xl hover:from-green-700 hover:to-green-600 transition-all duration-200 shadow-lg hover:shadow-green-500/25"
+                >
+                  <LogIn className="w-5 h-5" />
+                  <span>Go to Login</span>
+                </Link>
+                <Link
+                  to="/"
+                  className="w-full flex items-center justify-center space-x-2 px-6 py-3 text-gray-400 hover:text-gray-200 hover:bg-gray-700/50 rounded-xl transition-all duration-200"
+                >
+                  <Home className="w-5 h-5" />
+                  <span>Back to Home</span>
+                </Link>
+              </>
+            )}
           </div>
         </div>
 

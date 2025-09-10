@@ -25,8 +25,7 @@ export default function Register() {
     try {
       // Gunakan fungsi register dari auth store
       await register(form.email, form.password, form.fullname);
-      navigate(`/verify-email?email=${encodeURIComponent(form.email)}`);
-      navigate(`/verify-email?email=${encodeURIComponent(form.email)}`);
+      navigate('/verify-email/notification');
     } catch (e: any) {
       // Error sudah dihandle oleh store, tidak perlu set error lagi di sini
       console.error("Registration error:", e);

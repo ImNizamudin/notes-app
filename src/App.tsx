@@ -102,10 +102,10 @@ export default function App() {
             </PublicRoute>
           }
         />
-        <Route path="/verify-email/notification" element={<VerifyEmailNotification />} />
-        <Route path="/verify-email" element={<VerifyEmail />} />
 
+        <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="/email-verified" element={<EmailVerified />} />
+        <Route path="/verify-email/notification" element={<VerifyEmailNotification />} />
 
         <Route
           path="/"
