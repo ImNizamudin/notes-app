@@ -40,7 +40,7 @@ export default function ResetPassword() {
     setError("");
 
     try {
-      await apiClient("/auths/reset_password", "POST", {
+      await apiClient("/auths/reset_password", "PUT", {
         token,
         password: form.password
       });
