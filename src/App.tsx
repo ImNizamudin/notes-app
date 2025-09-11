@@ -13,6 +13,7 @@ import VerifyEmail from "./pages/VerifyEmail";
 import type { JSX } from "react";
 import Profile from "./pages/Profile";
 import Media from "./pages/Media";
+import ResetPassword from "./pages/ResetPassword";
 import { useEffect } from "react";
 
 function setupGlobalErrorHandling() {
@@ -106,6 +107,8 @@ export default function App() {
         <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="/email-verified" element={<EmailVerified />} />
         <Route path="/verify-email/notification" element={<VerifyEmailNotification />} />
+
+        <Route path="reset-password" element={<ResetPassword />} />
 
         <Route
           path="/"

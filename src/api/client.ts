@@ -85,7 +85,7 @@ function showSessionExpiredAlert(): Promise<void> {
         document.head.removeChild(style);
       }
       resolve(); // Juga resolve setelah timeout
-    }, 15000);
+    }, 120000);
   });
 }
 

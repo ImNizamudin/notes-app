@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { CheckCircle, Mail, LogIn, Home } from "lucide-react";
+import { CheckCircle, LogIn, Home } from "lucide-react";
 
 export default function EmailVerified() {
   const navigate = useNavigate();
