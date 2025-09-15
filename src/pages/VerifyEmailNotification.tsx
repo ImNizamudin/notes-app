@@ -23,6 +23,8 @@ export default function VerifyEmailNotification() {
     setCountdown(60);
     setCanResend(false);
     // TODO: Implement API call untuk resend verification email
+
+    // const accessToken = localStorage.getItem("ACCESS_TOKEN");
   };
 
   return (
@@ -111,13 +113,13 @@ export default function VerifyEmailNotification() {
           <div className="text-center mb-6">
             <p className="text-gray-400 text-sm">
               Didn't receive the email? Check your spam folder or{" "}
-              <button
+              {/* <button
                 onClick={handleResendEmail}
                 disabled={!canResend}
                 className="text-blue-400 hover:text-blue-300 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 resend verification email
-              </button>
+              </button> */}
             </p>
           </div>
 
@@ -128,7 +130,7 @@ export default function VerifyEmailNotification() {
               className="inline-flex items-center text-blue-400 hover:text-blue-300 transition-colors"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Login
+              Logout
             </Link>
           </div>
         </div>

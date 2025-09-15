@@ -85,7 +85,7 @@ function showSessionExpiredAlert(): Promise<void> {
         document.head.removeChild(style);
       }
       resolve(); // Juga resolve setelah timeout
-    }, 120000);
+    }, 15000);
   });
 }
 
@@ -177,6 +177,27 @@ export async function apiClient(
   const data = await parseResponse(res);
 
   if (!res.ok) {
+    // Handle khusus untuk user not verified
+    if (data?.meta.error_code === "ERR_USER_NOT_VERIFIED") {
+      // Redirect ke halaman verify email notification
+      window.location.href = 'http://localhost:5173/verify-email/notification';
+      
+      // Kirim request notification
+      if (accessToken) {
+        try {
+          await fetch(`${BASE_URL}/auths/verify_email/notification`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${accessToken}`
+            }
+          });
+        } catch (err) {
+          console.error('Failed to send verification notification:', err);
+        }
+      }
+    }
+    
     const message =
       (data && (data.message || data.error || (data as any).reason)) ||
       res.statusText ||
