@@ -124,9 +124,9 @@ async function parseResponse(res: Response) {
   } catch {
     throw new Error(text || "Unknown response");
   }
-  if (json && typeof json === "object" && "data" in json) {
-    return json.data;
-  }
+  // if (json && typeof json === "object" && "data" in json) {
+  //   return json.data;
+  // }
   return json;
 }
 
@@ -204,7 +204,7 @@ export async function apiClient(
       "API Error";
     throw { response: data || message };
   }
-  return data;
+  return data.data;
 }
 
 export default apiClient;
@@ -216,25 +216,94 @@ export async function apiClientWithPagination(
   body?: any,
   extraHeaders: Record<string, string> = {}
 ) {
-  const response = await apiClient(endpoint, method, body, extraHeaders);
+  const url = `${BASE_URL}${endpoint}`;
+  const accessToken = localStorage.getItem("ACCESS_TOKEN");
+
+  // cek token expired
+  if (accessToken && isTokenExpired(accessToken)) {
+    await showSessionExpiredAlert();
+    logout();
+    throw new Error("Session expired. Please log in again.");
+  }
+
+  const headers: Record<string, string> = {
+    ...extraHeaders,
+  };
+
+  if (!(body instanceof FormData)) {
+    headers["Content-Type"] = "application/json";
+  }
+  if (accessToken) {
+    headers["Authorization"] = `Bearer ${accessToken}`;
+  }
+
+  const res = await fetch(url, {
+    method,
+    headers,
+    body:
+      body instanceof FormData
+        ? body
+        : body
+        ? JSON.stringify(body)
+        : undefined,
+  });
+
+  if (res.status === 401) {
+    await showSessionExpiredAlert();
+    logout();
+    throw new Error("Unauthorized. Please log in again.");
+  }
+
+  const data = await parseResponse(res);
+
+  if (!res.ok) {
+    // Handle khusus untuk user not verified
+    if (data?.meta.error_code === "ERR_USER_NOT_VERIFIED") {
+      // Redirect ke halaman verify email notification
+      window.location.href = 'http://localhost:5173/verify-email/notification';
+      
+      // Kirim request notification
+      if (accessToken) {
+        try {
+          await fetch(`${BASE_URL}/auths/verify_email/notification`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${accessToken}`
+            }
+          });
+        } catch (err) {
+          console.error('Failed to send verification notification:', err);
+        }
+      }
+    }
+    
+    const message =
+      (data && (data.message || data.error || (data as any).reason)) ||
+      res.statusText ||
+      "API Error";
+    throw { response: data || message };
+  }
+
+  return data;
   
   // Jika response memiliki struktur {data, page, meta}
-  if (response && typeof response === 'object' && 'data' in response && 'page' in response) {
-    return response;
-  }
-  
-  // Jika response tidak memiliki struktur yang diharapkan, kembalikan dengan struktur default
-  return {
-    data: response,
-    page: {
-      current_page: 1,
-      total_data: Array.isArray(response) ? response.length : 1,
-      limit: 10,
-      total_page: 1
-    },
-    meta: {
-      message: "Success",
-      code: 200
-    }
-  };
+  // if (data && typeof data === 'object' && 'data' in data && 'page' in data) {
+  //   return data;
+  // }
+
+  // // Jika response tidak memiliki struktur yang diharapkan, kembalikan dengan struktur default
+  // return {
+  //   data: data,
+  //   page: {
+  //     current_page: 1,
+  //     total_data: Array.isArray(data) ? data.length : 1,
+  //     limit: 10,
+  //     total_page: 1
+  //   },
+  //   meta: {
+  //     message: "Success",
+  //     code: 200
+  //   }
+  // };
 }

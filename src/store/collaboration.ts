@@ -129,7 +129,7 @@ export const useCollaborationStore = create<CollaborationState>((set, get) => ({
     set({ loading: true, error: null });
     try {
       const response = await apiClientWithPagination(`/note_collaboration_dailies/${noteId}/list?page=${page}&limit=${limit}`, "GET");
-      
+
       // Pastikan struktur response sesuai
       let comments: DailyNote[] = [];
       let pagination: Pagination | null = null;
@@ -145,6 +145,7 @@ export const useCollaborationStore = create<CollaborationState>((set, get) => ({
         }
         
         pagination = response.page;
+        // console.log(pagination)
       } else if (Array.isArray(response)) {
         // Fallback jika response langsung array
         comments = response;
