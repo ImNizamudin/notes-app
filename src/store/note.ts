@@ -28,11 +28,12 @@ interface NotesState {
     title: string;
     body: string;
     tags?: string[];
+    type?: string;
     thumbnail?: string; // Tambahkan thumbnail di payload
   }) => Promise<void>;
   updateNote: (
     note_id: string | number,
-    payload: { title: string; body: string; tags?: string[]; thumbnail?: string } // Tambahkan thumbnail
+    payload: { title: string; body: string; tags?: string[]; type?: string; thumbnail?: string }
   ) => Promise<void>;
   deleteNote: (note_id: string | number) => Promise<void>;
   getNote: (note_id: string | number) => Note | undefined;

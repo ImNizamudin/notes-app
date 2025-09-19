@@ -137,3 +137,15 @@ button:focus-visible {
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
+
+/* quill komen notedetail */
+.auto-resize-quill .ql-editor {
+  min-height: 20px;
+  max-height: 400px; /* Batas maksimal optional */
+  overflow-y: auto;
+}
+
+.auto-resize-quill .ql-container {
+  height: auto;
+  min-height: 20px;
+}

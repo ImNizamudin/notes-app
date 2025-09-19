@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import apiClient from "../api/client";
+import { apiClient, apiClientWithPagination } from "../api/client";
 
 interface User {
   id: string;
@@ -16,22 +16,45 @@ interface Collaboration {
   body: string;
   created_at: string;
   updated_at: string;
+  thumbnail?: string;
+}
+
+interface DailyNote {
+  id: number;
+  created_at: string;
+  updated_at: string;
+  deleted_by: string | null;
+  deleted_at: string | null;
+  created_date: string;
+  note_id: number;
+  user_id: number;
+  user_name: string;
+  note_collaboration_id: number;
+  thumbnail: string;
+  body: string;
+}
+
+interface Pagination {
+  current_page: number;
+  total_data: number;
+  limit: number;
+  total_page: number;
 }
 
 interface CollaborationState {
   loading: boolean;
   error: string | null;
   collaborators: User[];
-  collaborations: Collaboration[]; // Untuk menyimpan data komentar
+  collaborations: Collaboration[];
+  comments: DailyNote[];
+  pagination: Pagination | null;
   
-  // Fungsi yang sudah ada
   createCollaboration: (userId: string, noteId: number) => Promise<void>;
   deleteCollaboration: (userId: string, noteId: number) => Promise<void>;
   fetchCollaborators: (noteId: number) => Promise<void>;
   
-  // Fungsi baru untuk komentar
-  fetchCollaborations: (noteId: number) => Promise<void>;
-  addOrUpdateComment: (noteId: number, body: string) => Promise<Collaboration>;
+  fetchCollaborations: (noteId: number, page?: number, limit?: number) => Promise<void>;
+  addOrUpdateComment: (noteId: number, body: string, thumbnail?: string, collaborationId?: string) => Promise<Collaboration>;
   deleteComment: (collaborationId: string) => Promise<void>;
 }
 
@@ -40,29 +63,27 @@ export const useCollaborationStore = create<CollaborationState>((set, get) => ({
   error: null,
   collaborators: [],
   collaborations: [],
+  comments: [],
+  pagination: null,
 
-  // Fungsi yang sudah ada
   fetchCollaborators: async (noteId: number) => {
     set({ loading: true, error: null });
     try {
       const res = await apiClient(`/notes/${noteId}`, "GET");
       
       let collaborators: User[] = [];
-
-      if (res && res.note && res.note.user_collaborators) {
-        collaborators = res.note.user_collaborators;
-      }
-
-      set({ collaborators });
-
       let collaborations: Collaboration[] = [];
 
-      // Extract collaborations dari berbagai kemungkinan struktur response
-      if (res && res.note && res.note.note_collaborations) {
-        collaborations = res.note.note_collaborations;
+      if (res && res.note) {
+        if (res.note.user_collaborators) {
+          collaborators = res.note.user_collaborators;
+        }
+        if (res.note.note_collaborations) {
+          collaborations = res.note.note_collaborations;
+        }
       }
 
-      set({ collaborations });
+      set({ collaborators, collaborations });
     } catch (err: any) {
       set({ error: err.message || "Failed to fetch collaborators" });
     } finally {
@@ -104,77 +125,105 @@ export const useCollaborationStore = create<CollaborationState>((set, get) => ({
     }
   },
 
-  // Fungsi baru untuk komentar
-  fetchCollaborations: async (noteId: number) => {
+  fetchCollaborations: async (noteId: number, page: number = 1, limit: number = 10) => {
     set({ loading: true, error: null });
     try {
-      const res = await apiClient(`/notes/${noteId}`, "GET");
+      const response = await apiClientWithPagination(`/note_collaboration_dailies/${noteId}/list?page=${page}&limit=${limit}`, "GET");
       
-      let collaborations: Collaboration[] = [];
-
-      // Extract collaborations dari berbagai kemungkinan struktur response
-      if (res && res.note && res.note.note_collaborations) {
-        collaborations = res.note.note_collaborations;
+      // Pastikan struktur response sesuai
+      let comments: DailyNote[] = [];
+      let pagination: Pagination | null = null;
+      
+      // Handle response dengan struktur pagination
+      if (response && response.data && response.page) {
+        if (Array.isArray(response.data)) {
+          comments = response.data;
+        } else if (response.data.daily_notes && Array.isArray(response.data.daily_notes)) {
+          comments = response.data.daily_notes;
+        } else if (response.data.data && Array.isArray(response.data.data)) {
+          comments = response.data.data;
+        }
+        
+        pagination = response.page;
+      } else if (Array.isArray(response)) {
+        // Fallback jika response langsung array
+        comments = response;
+        pagination = {
+          current_page: 1,
+          total_data: response.length,
+          limit: limit,
+          total_page: 1
+        };
       }
-
-      set({ collaborations });
+      
+      set({ comments, pagination, error: null });
     } catch (err: any) {
-      set({ error: err.message || "Failed to fetch collaborations" });
-      throw err;
+      const errorMessage = err.response?.data?.message || err.message || "Failed to fetch collaborations";
+      set({ error: errorMessage });
+      throw new Error(errorMessage);
     } finally {
       set({ loading: false });
     }
   },
 
-  addOrUpdateComment: async (noteId: number, body: string) => {
+  addOrUpdateComment: async (noteId: number, body: string, thumbnail?: string, collaborationId?: string) => {
     set({ loading: true, error: null });
     try {
-      const response = await apiClient("/collaborations", "PUT", {
-        noteId: noteId,
-        body: body.trim()
-      });
+      let response;
+      const payload = {
+        note_id: noteId,
+        body: body.trim(),
+        ...(thumbnail && { thumbnail })
+      };
+      
+      if (collaborationId) {
+        response = await apiClient(`/note_collaboration_dailies/${collaborationId}`, "PUT", payload);
+      } else {
+        response = await apiClient("/note_collaboration_dailies", "POST", payload);
+      }
 
-      // Handle berbagai struktur response
-      const collaborationData = response.data?.collaboration || 
-                               response.collaboration || 
-                               response.data || 
-                               response;
+      // Handle response berdasarkan struktur yang mungkin
+      const responseData = response.data || response;
+      
+      if (!responseData) {
+        throw new Error("Invalid response from server");
+      }
 
       const newCollaboration: Collaboration = {
-        id: collaborationData.id || `temp-${Date.now()}`,
-        userId: collaborationData.user_id || collaborationData.userId || "0",
-        noteId: collaborationData.note_id || collaborationData.noteId || noteId,
-        user: collaborationData.user || {
+        id: responseData.id?.toString() || `temp-${Date.now()}`,
+        userId: responseData.user_id?.toString() || responseData.userId?.toString() || "0",
+        noteId: responseData.note_id || responseData.noteId || noteId,
+        user: responseData.user || {
           id: "0",
           username: "Unknown",
           fullname: "Unknown User",
           email: ""
         },
-        body: collaborationData.body || body,
-        created_at: collaborationData.created_at || new Date().toISOString(),
-        updated_at: collaborationData.updated_at || new Date().toISOString()
+        body: responseData.body || body,
+        thumbnail: responseData.thumbnail || thumbnail,
+        created_at: responseData.created_at || new Date().toISOString(),
+        updated_at: responseData.updated_at || new Date().toISOString()
       };
 
       // Update state
       set((state) => {
-        const existingIndex = state.collaborations.findIndex(c => c.id === newCollaboration.id);
-        
-        if (existingIndex >= 0) {
-          // Update existing
-          const updatedCollaborations = state.collaborations.map((collab, index) => 
-            index === existingIndex ? newCollaboration : collab
+        if (collaborationId) {
+          // Update existing comment
+          const updatedCollaborations = state.collaborations.map(collab =>
+            collab.id === collaborationId ? newCollaboration : collab
           );
           return { collaborations: updatedCollaborations };
         } else {
-          // Add new
-          return { collaborations: [...state.collaborations, newCollaboration] };
+          // Add new comment
+          return { collaborations: [newCollaboration, ...state.collaborations] };
         }
       });
 
       return newCollaboration;
     } catch (err: any) {
-      set({ error: err.message || "Failed to add/update comment" });
-      throw err;
+      const errorMessage = err.response?.data?.message || err.message || "Failed to add/update comment";
+      set({ error: errorMessage });
+      throw new Error(errorMessage);
     } finally {
       set({ loading: false });
     }
@@ -183,22 +232,17 @@ export const useCollaborationStore = create<CollaborationState>((set, get) => ({
   deleteComment: async (collaborationId: string) => {
     set({ loading: true, error: null });
     try {
-      // Asumsi: mengirim body kosong akan menghapus komentar
-      await apiClient("/collaborations", "PUT", {
-        noteId: "0", // Note ID dummy, mungkin perlu disesuaikan
-        body: ""
-      });
-
-      // Atau jika ada endpoint DELETE khusus:
-      // await apiClient(`/collaboration/${collaborationId}`, "DELETE");
+      await apiClient(`/note_collaboration_dailies/${collaborationId}`, "DELETE");
 
       // Hapus dari state
       set((state) => ({
-        collaborations: state.collaborations.filter(collab => collab.id !== collaborationId)
+        collaborations: state.collaborations.filter(collab => collab.id !== collaborationId),
+        comments: state.comments.filter(comment => comment.id.toString() !== collaborationId)
       }));
     } catch (err: any) {
-      set({ error: err.message || "Failed to delete comment" });
-      throw err;
+      const errorMessage = err.response?.data?.message || err.message || "Failed to delete comment";
+      set({ error: errorMessage });
+      throw new Error(errorMessage);
     } finally {
       set({ loading: false });
     }

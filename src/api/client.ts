@@ -208,3 +208,33 @@ export async function apiClient(
 }
 
 export default apiClient;
+
+// Tambahkan fungsi ini di client.ts
+export async function apiClientWithPagination(
+  endpoint: string,
+  method: RequestMethod = "GET",
+  body?: any,
+  extraHeaders: Record<string, string> = {}
+) {
+  const response = await apiClient(endpoint, method, body, extraHeaders);
+  
+  // Jika response memiliki struktur {data, page, meta}
+  if (response && typeof response === 'object' && 'data' in response && 'page' in response) {
+    return response;
+  }
+  
+  // Jika response tidak memiliki struktur yang diharapkan, kembalikan dengan struktur default
+  return {
+    data: response,
+    page: {
+      current_page: 1,
+      total_data: Array.isArray(response) ? response.length : 1,
+      limit: 10,
+      total_page: 1
+    },
+    meta: {
+      message: "Success",
+      code: 200
+    }
+  };
+}

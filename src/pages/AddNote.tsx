@@ -6,7 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { 
   Save, X, ArrowLeft, FileText, Tag, Type, 
   ImageIcon, Plus, Trash2, Upload, AlertCircle, 
-  CheckCircle, Download, Eye, RefreshCw 
+  CheckCircle, Download, Eye, RefreshCw, Lock, Globe 
 } from "lucide-react";
 import hljs from "highlight.js";
 import "highlight.js/styles/github-dark.css";
@@ -88,6 +88,7 @@ function AddNote() {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [tagsInput, setTagsInput] = useState("");
+  const [type, setType] = useState<"private" | "default">("default"); // State baru untuk type
   const [thumbnail, setThumbnail] = useState<string | null>(null);
   const [showMediaModal, setShowMediaModal] = useState(false);
   const [activeTab, setActiveTab] = useState<"gallery" | "upload">("gallery");
@@ -212,6 +213,7 @@ function AddNote() {
         title,
         body,
         tags,
+        type, // Tambahkan type ke data yang dikirim
         thumbnail: thumbnail || undefined,
       });
 
@@ -315,6 +317,32 @@ function AddNote() {
                   })}
                 </div>
               )}
+            </div>
+
+            {/* Type - Dropdown baru */}
+            <div className="p-6 border-b border-gray-700">
+              <div className="flex items-center space-x-2 mb-3">
+                {type === "private" ? (
+                  <Lock className="w-5 h-5 text-gray-400" />
+                ) : (
+                  <Globe className="w-5 h-5 text-gray-400" />
+                )}
+                <label className="text-sm font-medium text-gray-300">Visibility</label>
+              </div>
+              <select
+                className="w-full bg-gray-700 border border-gray-600 text-gray-100 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                value={type}
+                onChange={(e) => setType(e.target.value as "private" | "default")}
+                required
+              >
+                <option value="default">Public (Default)</option>
+                <option value="private">Private</option>
+              </select>
+              <p className="text-gray-400 text-sm mt-2">
+                {type === "private" 
+                  ? "Only you can see this note" 
+                  : "This note will be visible to everyone"}
+              </p>
             </div>
 
             {/* Thumbnail */}
