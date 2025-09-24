@@ -32,6 +32,8 @@ interface DailyNote {
   note_collaboration_id: number;
   thumbnail: string;
   body: string;
+  is_editable: boolean;
+  is_deletable: boolean;
 }
 
 interface Pagination {

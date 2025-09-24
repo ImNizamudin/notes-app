@@ -123,31 +123,28 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   async logout() {
-    const test = await apiClient("/auths/logout", "DELETE")
+    await apiClient("/auths/logout", "DELETE")
 
-    if(test) {
-      // Hapus semua item localStorage terkait auth
-      localStorage.removeItem("ACCESS_TOKEN");
-      localStorage.removeItem("REFRESH_TOKEN");
-      localStorage.removeItem("USER");
-      localStorage.removeItem("USER_EMAIL");
+    // Hapus semua item localStorage terkait auth
+    localStorage.removeItem("ACCESS_TOKEN");
+    localStorage.removeItem("REFRESH_TOKEN");
+    localStorage.removeItem("USER");
+    localStorage.removeItem("USER_EMAIL");
       
-      // Reset state ke null
-      set({ 
-        accessToken: null, 
-        refreshToken: null, 
-        user: null,
-        error: null,
-        loading: false 
-      });
+    // Reset state ke null
+    set({ 
+      accessToken: null, 
+      refreshToken: null, 
+      user: null,
+      error: null,
+      loading: false 
+    });
 
       
-      // Redirect ke halaman login setelah logout
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login';
-      }
+    // Redirect ke halaman login setelah logout
+    if (window.location.pathname !== '/login') {
+      window.location.href = '/login';
     }
-
     
   },
 

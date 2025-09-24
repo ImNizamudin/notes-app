@@ -161,6 +161,8 @@ function NoteDetail() {
     }
   };
 
+  console.log(note)
+
   // Load comments when page changes
   const loadComments = async (page: number) => {
     if (!id) return;
@@ -473,6 +475,10 @@ function NoteDetail() {
     );
   };
 
+  // Check permissions for note
+  const canEditNote = note?.is_editable === true;
+  const canDeleteNote = note?.is_deletable === true;
+
   return (
     <div className="min-h-screen bg-gray-900">
       {/* Header */}
@@ -541,24 +547,30 @@ function NoteDetail() {
                     </div>
                   </div>
                   
-                  {/* Action Buttons */}
-                  <div className="flex items-center space-x-3">
-                    <Link
-                      to={`/notes/${note.id}/edit`}
-                      className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-lg hover:from-blue-700 hover:to-blue-600 transition-all duration-200 shadow-lg hover:shadow-blue-500/25"
-                    >
-                      <Edit3 className="w-4 h-4" />
-                      <span>Edit</span>
-                    </Link>
-                    <button
-                      onClick={onDelete}
-                      disabled={deleting}
-                      className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-red-600 to-red-500 text-white rounded-lg hover:from-red-700 hover:to-red-600 transition-all duration-200 shadow-lg hover:shadow-red-500/25 disabled:opacity-50"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                      <span>{deleting ? "Deleting..." : "Delete"}</span>
-                    </button>
-                  </div>
+                  {/* Action Buttons - Conditional based on permissions */}
+                  {(canEditNote || canDeleteNote) && (
+                    <div className="flex items-center space-x-3">
+                      {canEditNote && (
+                        <Link
+                          to={`/notes/${note.id}/edit`}
+                          className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-lg hover:from-blue-700 hover:to-blue-600 transition-all duration-200 shadow-lg hover:shadow-blue-500/25"
+                        >
+                          <Edit3 className="w-4 h-4" />
+                          <span>Edit</span>
+                        </Link>
+                      )}
+                      {canDeleteNote && (
+                        <button
+                          onClick={onDelete}
+                          disabled={deleting}
+                          className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-red-600 to-red-500 text-white rounded-lg hover:from-red-700 hover:to-red-600 transition-all duration-200 shadow-lg hover:shadow-red-500/25 disabled:opacity-50"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          <span>{deleting ? "Deleting..." : "Delete"}</span>
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Tags */}
@@ -725,153 +737,163 @@ function NoteDetail() {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {comments.map((comment) => (
-                      <div key={comment.id} className="bg-gray-700 rounded-lg p-4">
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="flex items-center space-x-2">
-                            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-                              <span className="text-white text-sm font-medium">
-                                {comment.user_name?.charAt(0)?.toUpperCase() || 'U'}
-                              </span>
+                    {comments.map((comment) => {
+                      // Check permissions for each comment
+                      const canEditComment = comment.is_editable === true;
+                      const canDeleteComment = comment.is_deletable === true;
+
+                      return (
+                        <div key={comment.id} className="bg-gray-700 rounded-lg p-4">
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="flex items-center space-x-2">
+                              <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+                                <span className="text-white text-sm font-medium">
+                                  {comment.user_name?.charAt(0)?.toUpperCase() || 'U'}
+                                </span>
+                              </div>
+                              <div>
+                                <p className="text-gray-100 font-medium">
+                                  {comment.user_name || 'Unknown User'}
+                                </p>
+                                <p className="text-gray-400 text-sm">
+                                  {formatDate(comment.created_at)}
+                                </p>
+                              </div>
                             </div>
-                            <div>
-                              <p className="text-gray-100 font-medium">
-                                {comment.user_name || 'Unknown User'}
-                              </p>
-                              <p className="text-gray-400 text-sm">
-                                {formatDate(comment.created_at)}
-                              </p>
-                            </div>
+
+                            {/* Edit/Delete Buttons - Conditional based on permissions */}
+                            {editingCommentId !== String(comment.id) && (canEditComment || canDeleteComment) && (
+                              <div className="flex space-x-1">
+                                {canEditComment && (
+                                  <button
+                                    onClick={() => {
+                                      setEditingCommentId(String(comment.id));
+                                      setEditCommentText(comment.body || '');
+                                      setEditThumbnail(comment.thumbnail || null);
+                                    }}
+                                    className="text-gray-400 hover:text-blue-400 p-1"
+                                    title="Edit comment"
+                                  >
+                                    <Edit3 className="w-4 h-4" />
+                                  </button>
+                                )}
+                                {canDeleteComment && (
+                                  <button
+                                    onClick={() => handleDeleteComment(String(comment.id))}
+                                    className="text-gray-400 hover:text-red-400 p-1"
+                                    title="Delete comment"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                )}
+                              </div>
+                            )}
                           </div>
 
-                          {/* Edit/Delete Buttons */}
-                          {editingCommentId !== String(comment.id) && (
-                            <div className="flex space-x-1">
-                              <button
-                                onClick={() => {
-                                  setEditingCommentId(String(comment.id));
-                                  setEditCommentText(comment.body || '');
-                                  setEditThumbnail(comment.thumbnail || null);
-                                }}
-                                className="text-gray-400 hover:text-blue-400 p-1"
-                                title="Edit comment"
+                          {/* Comment Thumbnail */}
+                          {comment.thumbnail && (
+                            <div className="mb-3">
+                              <a
+                                href={`https://minio-s3.radarku.online/radarku-bucket/notes_app/${comment.thumbnail}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-block"
+                                title="View image in new tab"
                               >
-                                <Edit3 className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteComment(String(comment.id))}
-                                className="text-gray-400 hover:text-red-400 p-1"
-                                title="Delete comment"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
+                                <img 
+                                  src={`https://minio-s3.radarku.online/radarku-bucket/notes_app/${comment.thumbnail}`}
+                                  alt="Comment thumbnail"
+                                  className="w-32 h-32 object-cover rounded-lg border border-gray-600 hover:opacity-90 transition-opacity"
+                                />
+                              </a>
                             </div>
                           )}
-                        </div>
 
-                        {/* Comment Thumbnail */}
-                        {comment.thumbnail && (
-                          <div className="mb-3">
-                            <a
-                              href={`https://minio-s3.radarku.online/radarku-bucket/notes_app/${comment.thumbnail}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-block"
-                              title="View image in new tab"
-                            >
-                              <img 
-                                src={`https://minio-s3.radarku.online/radarku-bucket/notes_app/${comment.thumbnail}`}
-                                alt="Comment thumbnail"
-                                className="w-32 h-32 object-cover rounded-lg border border-gray-600 hover:opacity-90 transition-opacity"
-                              />
-                            </a>
-                          </div>
-                        )}
+                          {editingCommentId === String(comment.id) ? (
+                            <div className="space-y-4 mt-2">
+                              {/* Editor untuk edit komentar */}
+                              <div className="bg-gray-600 border border-gray-500 rounded-lg overflow-hidden">
+                                <ReactQuill
+                                  value={editCommentText}
+                                  onChange={setEditCommentText}
+                                  modules={quillModules}
+                                  formats={quillFormats}
+                                  theme="snow"
+                                  className="auto-resize-quill"
+                                />
+                              </div>
 
-                        {editingCommentId === String(comment.id) ? (
-                          <div className="space-y-4 mt-2">
-                            {/* Editor untuk edit komentar */}
-                            <div className="bg-gray-600 border border-gray-500 rounded-lg overflow-hidden">
-                              <ReactQuill
-                                value={editCommentText}
-                                onChange={setEditCommentText}
-                                modules={quillModules}
-                                formats={quillFormats}
-                                theme="snow"
-                                className="auto-resize-quill"
-                              />
-                            </div>
-
-                            {/* Thumbnail Editor Section */}
-                            <div className="flex items-center space-x-3">
-                              {editThumbnail ? (
-                                <div className="relative">
-                                  <a
-                                    href={`https://minio-s3.radarku.online/radarku-bucket/notes_app/${editThumbnail}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="block"
-                                    title="View image in new tab"
-                                  >
-                                    <img 
-                                      src={`https://minio-s3.radarku.online/radarku-bucket/notes_app/${editThumbnail}`}
-                                      alt="Thumbnail preview"
-                                      className="w-32 h-32 object-cover rounded-lg border border-gray-600"
-                                    />
-                                  </a>
+                              {/* Thumbnail Editor Section */}
+                              <div className="flex items-center space-x-3">
+                                {editThumbnail ? (
+                                  <div className="relative">
+                                    <a
+                                      href={`https://minio-s3.radarku.online/radarku-bucket/notes_app/${editThumbnail}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="block"
+                                      title="View image in new tab"
+                                    >
+                                      <img 
+                                        src={`https://minio-s3.radarku.online/radarku-bucket/notes_app/${editThumbnail}`}
+                                        alt="Thumbnail preview"
+                                        className="w-32 h-32 object-cover rounded-lg border border-gray-600"
+                                      />
+                                    </a>
+                                    <button
+                                      type="button"
+                                      onClick={() => setEditThumbnail(null)}
+                                      className="absolute -top-2 -right-2 p-1 bg-red-600 hover:bg-red-700 text-white rounded-full"
+                                      title="Remove thumbnail"
+                                    >
+                                      <X className="w-3 h-3" />
+                                    </button>
+                                  </div>
+                                ) : (
                                   <button
                                     type="button"
-                                    onClick={() => setEditThumbnail(null)}
-                                    className="absolute -top-2 -right-2 p-1 bg-red-600 hover:bg-red-700 text-white rounded-full"
-                                    title="Remove thumbnail"
+                                    onClick={() => setShowMediaModal(true)}
+                                    className="flex items-center space-x-2 px-3 py-2 bg-gray-600 text-gray-300 rounded-lg hover:bg-gray-500 transition-colors"
+                                    title="Add thumbnail"
                                   >
-                                    <X className="w-3 h-3" />
+                                    <ImageIcon className="w-4 h-4" />
+                                    <span className="text-sm">Change Image</span>
                                   </button>
-                                </div>
-                              ) : (
-                                <button
-                                  type="button"
-                                  onClick={() => setShowMediaModal(true)}
-                                  className="flex items-center space-x-2 px-3 py-2 bg-gray-600 text-gray-300 rounded-lg hover:bg-gray-500 transition-colors"
-                                  title="Add thumbnail"
-                                >
-                                  <ImageIcon className="w-4 h-4" />
-                                  <span className="text-sm">Change Image</span>
-                                </button>
-                              )}
-                            </div>
+                                )}
+                              </div>
 
-                            {/* Action Buttons - DI KANAN */}
-                            <div className="flex justify-end space-x-2 pt-2">
-                              <button
-                                onClick={() => {
-                                  setEditingCommentId(null);
-                                  setEditCommentText("");
-                                  setEditThumbnail(null);
-                                }}
-                                className="px-4 py-2 bg-gray-600 text-gray-300 rounded-lg hover:bg-gray-500 transition-colors"
-                              >
-                                Cancel
-                              </button>
-                              <button
-                                onClick={() => handleEditComment()}
-                                disabled={!editCommentText.trim() || collaborationsLoading}
-                                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                              >
-                                Save Changes
-                              </button>
+                              {/* Action Buttons - DI KANAN */}
+                              <div className="flex justify-end space-x-2 pt-2">
+                                <button
+                                  onClick={() => {
+                                    setEditingCommentId(null);
+                                    setEditCommentText("");
+                                    setEditThumbnail(null);
+                                  }}
+                                  className="px-4 py-2 bg-gray-600 text-gray-300 rounded-lg hover:bg-gray-500 transition-colors"
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  onClick={() => handleEditComment()}
+                                  disabled={!editCommentText.trim() || collaborationsLoading}
+                                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                >
+                                  Save Changes
+                                </button>
+                              </div>
                             </div>
-                          </div>
-                        ) : (
-                          <div 
-                            className="ql-editor text-gray-300"
-                            dangerouslySetInnerHTML={{ 
-                              __html: DOMPurify.sanitize(comment.body || '') 
-                            }}
-                          />
-                        )}
-                      </div>
-                    ))}
+                          ) : (
+                            <div 
+                              className="ql-editor text-gray-300"
+                              dangerouslySetInnerHTML={{ 
+                                __html: DOMPurify.sanitize(comment.body || '') 
+                              }}
+                            />
+                          )}
+                        </div>
+                      );
+                    })}
 
                     {comments.length === 0 && !collaborationsLoading && (
                       <div className="text-center py-8 text-gray-400">

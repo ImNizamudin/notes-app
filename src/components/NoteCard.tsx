@@ -13,17 +13,17 @@ interface Props {
         thumbnail?: string;
         created_at?: string;
         updated_at?: string;
-        user_owner?: {
-            id: string;
-            username: string;
-            fullname: string;
-        };
+        username?: string;
+        is_editable?: boolean;
+        is_deletable?: boolean;
     }
 }
 
 function NoteCard({ note }: Props) {
     const deleteNote = useNotesStore((state) => state.deleteNote);
     const [isDeleting, setIsDeleting] = useState(false);
+
+    console.log(note)
     
     const handleDelete = async () => {
         if (!confirm("Hapus catatan ini?")) return;
@@ -59,14 +59,9 @@ function NoteCard({ note }: Props) {
         return plainText.substring(0, maxLength) + '...';
     };
 
-    const getUserInitials = (user?: { fullname?: string; username?: string }) => {
-        const name = user?.fullname || user?.username || 'U';
-        return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-    };
-
-    const getUserDisplayName = (user?: { fullname?: string; username?: string }) => {
-        return user?.fullname || user?.username || 'Unknown User';
-    };
+    // Check permissions
+    const canEdit = note.is_editable === true;
+    const canDelete = note.is_deletable === true;
 
     return (
         <div className="group bg-gray-800 border border-gray-700 rounded-xl overflow-hidden hover:shadow-xl hover:shadow-gray-900/20 transition-all duration-300 hover:border-gray-600">
@@ -76,13 +71,13 @@ function NoteCard({ note }: Props) {
                     <div className="flex items-center space-x-3">
                         {/* Profile Avatar */}
                         <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
-                            {getUserInitials(note.user_owner)}
+                            {note.username}
                         </div>
                         
                         {/* User Info */}
                         <div className="flex-1 min-w-0">
                             <h3 className="text-gray-200 font-medium text-sm truncate">
-                                {getUserDisplayName(note.user_owner)}
+                                {note.username}
                             </h3>
                             <div className="flex items-center space-x-2 text-xs text-gray-400">
                                 <Clock className="w-3 h-3" />
@@ -91,8 +86,9 @@ function NoteCard({ note }: Props) {
                         </div>
                     </div>
 
-                    {/* Action Buttons - Only show on hover */}
+                    {/* Action Buttons - Only show on hover and based on permissions */}
                     <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {/* View button - always visible */}
                         <Link 
                             to={`/notes/${note.id}`}
                             className="p-1.5 text-gray-400 hover:text-blue-400 hover:bg-gray-700 rounded-md transition-colors"
@@ -100,21 +96,29 @@ function NoteCard({ note }: Props) {
                         >
                             <Eye className="w-4 h-4" />
                         </Link>
-                        <Link 
-                            to={`/notes/${note.id}/edit`}
-                            className="p-1.5 text-gray-400 hover:text-green-400 hover:bg-gray-700 rounded-md transition-colors"
-                            title="Edit"
-                        >
-                            <Edit3 className="w-4 h-4" />
-                        </Link>
-                        <button 
-                            onClick={handleDelete}
-                            disabled={isDeleting}
-                            className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-gray-700 rounded-md transition-colors disabled:opacity-50"
-                            title="Delete"
-                        >
-                            <Trash2 className="w-4 h-4" />
-                        </button>
+                        
+                        {/* Edit button - only if editable */}
+                        {canEdit && (
+                            <Link 
+                                to={`/notes/${note.id}/edit`}
+                                className="p-1.5 text-gray-400 hover:text-green-400 hover:bg-gray-700 rounded-md transition-colors"
+                                title="Edit"
+                            >
+                                <Edit3 className="w-4 h-4" />
+                            </Link>
+                        )}
+                        
+                        {/* Delete button - only if deletable */}
+                        {canDelete && (
+                            <button 
+                                onClick={handleDelete}
+                                disabled={isDeleting}
+                                className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-gray-700 rounded-md transition-colors disabled:opacity-50"
+                                title="Delete"
+                            >
+                                <Trash2 className="w-4 h-4" />
+                            </button>
+                        )}
                     </div>
                 </div>
             </div>
@@ -191,19 +195,24 @@ function NoteCard({ note }: Props) {
 
                     {/* Main Actions */}
                     <div className="flex space-x-2">
+                        {/* View button - always visible */}
                         <Link 
                             to={`/notes/${note.id}`}
                             className="px-3 py-1.5 bg-gradient-to-r from-blue-600 to-blue-500 text-white text-sm rounded-lg hover:from-blue-700 hover:to-blue-600 transition-all duration-200 shadow-lg hover:shadow-blue-500/25"
                         >
                             View
                         </Link>
-                        <button 
-                            onClick={handleDelete}
-                            disabled={isDeleting}
-                            className="px-3 py-1.5 bg-gradient-to-r from-red-600 to-red-500 text-white text-sm rounded-lg hover:from-red-700 hover:to-red-600 transition-all duration-200 shadow-lg hover:shadow-red-500/25 disabled:opacity-50"
-                        >
-                            {isDeleting ? 'Deleting...' : 'Delete'}
-                        </button>
+                        
+                        {/* Delete button - only if deletable */}
+                        {canDelete && (
+                            <button 
+                                onClick={handleDelete}
+                                disabled={isDeleting}
+                                className="px-3 py-1.5 bg-gradient-to-r from-red-600 to-red-500 text-white text-sm rounded-lg hover:from-red-700 hover:to-red-600 transition-all duration-200 shadow-lg hover:shadow-red-500/25 disabled:opacity-50"
+                            >
+                                {isDeleting ? 'Deleting...' : 'Delete'}
+                            </button>
+                        )}
                     </div>
                 </div>
             </div>

@@ -119,12 +119,6 @@ function NoteList() {
                                     id: String(note.id),
                                     created_at: note.createdAt,
                                     updated_at: note.updatedAt,
-                                    user_owner: note.user_owner
-                                        ? {
-                                            ...note.user_owner,
-                                            id: String(note.user_owner.id),
-                                        }
-                                        : undefined,
                                 }}
                             />
                         ))}
