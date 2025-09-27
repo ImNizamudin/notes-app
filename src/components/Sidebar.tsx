@@ -88,7 +88,7 @@ function Sidebar({ activeMenu, setActiveMenu }: SidebarProps) {
       </nav>
 
       {/* User Info & Logout */}
-      <div className="p-4 border-t border-gray-700/50">
+      <div className="p-2 border-t border-gray-700/50">
         {sidebarExpanded && emailUserLogin && (
           <div className="mb-3 px-3 py-2 bg-gray-700/50 rounded-lg">
             <div className="flex items-center space-x-2">
@@ -102,9 +102,9 @@ function Sidebar({ activeMenu, setActiveMenu }: SidebarProps) {
         
         <button 
           onClick={handleLogout}
-          className="w-full flex items-center space-x-3 px-3 py-3 text-gray-400 hover:text-red-400 hover:bg-gray-700/50 rounded-xl transition-all duration-200"
+          className="w-full flex items-center space-x-3 p-3 lg:justify-center text-gray-400 hover:text-red-400 hover:bg-gray-700/50 rounded-xl transition-all duration-200"
         >
-          <LogOut className="w-4 h-4 flex-shrink-0" />
+          <LogOut className="w-5 h-5 flex-shrink-0" />
           {sidebarExpanded && (
             <span className="font-medium whitespace-nowrap">Logout</span>
           )}

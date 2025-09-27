@@ -180,7 +180,7 @@ export const useCollaborationStore = create<CollaborationState>((set, get) => ({
       };
       
       if (collaborationId) {
-        response = await apiClient(`/note_collaboration_dailies/${collaborationId}`, "PUT", payload);
+        response = await apiClientWithPagination(`/note_collaboration_dailies/${collaborationId}`, "PUT", payload);
       } else {
         response = await apiClient("/note_collaboration_dailies", "POST", payload);
       }

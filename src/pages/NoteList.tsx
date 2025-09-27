@@ -119,6 +119,8 @@ function NoteList() {
                                     id: String(note.id),
                                     created_at: note.createdAt,
                                     updated_at: note.updatedAt,
+                                    total_daily_notes: note.total_daily_notes ?? 0,
+                                    total_daily_notes_mine: note.total_daily_notes_mine ?? 0,
                                 }}
                             />
                         ))}

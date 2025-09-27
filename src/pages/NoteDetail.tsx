@@ -116,8 +116,6 @@ function NoteDetail() {
     fetchCollaborations
   } = useCollaborationStore();
 
-  console.log(comments)
-
   const [note, setNote] = useState<Note | null>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
@@ -160,8 +158,6 @@ function NoteDetail() {
       setLoading(false);
     }
   };
-
-  console.log(note)
 
   // Load comments when page changes
   const loadComments = async (page: number) => {
@@ -212,6 +208,9 @@ function NoteDetail() {
   const handleEditComment = async () => {
     if (!editCommentText.trim() || !editingCommentId) return;
     if (!id) return;
+
+    setErr(null);
+
     try {
       await addOrUpdateComment(
         parseInt(id),
@@ -225,6 +224,7 @@ function NoteDetail() {
       // Reload current page
       await loadComments(currentPage);
     } catch (error: any) {
+      console.error("Edit comment error:", error);
       setErr(error.message || "Failed to edit comment");
     }
   };
@@ -380,7 +380,6 @@ function NoteDetail() {
     setThumbnail(null);
   };
 
-  console.log(pagination)
   // Pagination component
   const PaginationComponent = () => {
     if (!pagination || pagination.total_page <= 1) return null;
@@ -705,11 +704,10 @@ function NoteDetail() {
                         <button
                           type="button"
                           onClick={() => setShowMediaModal(true)}
-                          className="flex items-center space-x-2 px-3 py-2 bg-gray-600 text-gray-300 rounded-lg hover:bg-gray-500 transition-colors"
+                          className="flex items-center space-x-2 px-2 py-2 bg-gray-600 text-gray-300 rounded-full hover:bg-gray-500 transition-colors"
                           title="Add thumbnail"
                         >
                           <ImageIcon className="w-4 h-4" />
-                          <span className="text-sm">Add Image</span>
                         </button>
                       )}
                     </div>
@@ -718,14 +716,13 @@ function NoteDetail() {
                     <button
                       onClick={handleAddComment}
                       disabled={!body.trim() || collaborationsLoading}
-                      className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      className="flex items-center space-x-2 px-2 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                       {collaborationsLoading ? (
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                       ) : (
                         <Send className="w-4 h-4" />
                       )}
-                      <span>Add Comment</span>
                     </button>
                   </div>
                 </div>

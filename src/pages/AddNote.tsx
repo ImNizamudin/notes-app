@@ -6,7 +6,8 @@ import { useNavigate } from "react-router-dom";
 import { 
   Save, X, ArrowLeft, FileText, Tag, Type, 
   ImageIcon, Plus, Trash2, Upload, AlertCircle, 
-  CheckCircle, Download, Eye, RefreshCw, Lock, Globe 
+  CheckCircle, Download, Eye, RefreshCw, Lock, Globe,
+  Earth, User
 } from "lucide-react";
 import hljs from "highlight.js";
 import "highlight.js/styles/github-dark.css";
@@ -81,6 +82,77 @@ interface GalleryResponse {
   };
 }
 
+// Modal untuk visibility options
+interface VisibilityModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  selectedType: "private" | "default";
+  onSelect: (type: "private" | "default") => void;
+}
+
+function VisibilityModal({ isOpen, onClose, selectedType, onSelect }: VisibilityModalProps) {
+  if (!isOpen) return null;
+
+  const options = [
+    {
+      value: "default" as const,
+      icon: Earth,
+      title: "Public",
+      description: "Visible to everyone",
+      color: "text-blue-400"
+    },
+    {
+      value: "private" as const,
+      icon: Lock,
+      title: "Private",
+      description: "Only visible to you",
+      color: "text-purple-400"
+    }
+  ];
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+      <div className="bg-gray-800 rounded-xl w-full max-w-md">
+        <div className="p-6 border-b border-gray-700">
+          <h2 className="text-xl font-bold text-gray-100">Select Visibility</h2>
+          <p className="text-gray-400 text-sm mt-1">Choose who can see this note</p>
+        </div>
+        
+        <div className="p-6 space-y-3">
+          {options.map((option) => (
+            <button
+              key={option.value}
+              onClick={() => onSelect(option.value)}
+              className={`w-full p-4 text-left rounded-lg border-2 transition-all ${
+                selectedType === option.value
+                  ? "border-blue-500 bg-blue-500/10"
+                  : "border-gray-600 bg-gray-700 hover:border-gray-500"
+              }`}
+            >
+              <div className="flex items-center space-x-3">
+                <option.icon className={`w-5 h-5 ${option.color}`} />
+                <div>
+                  <div className="font-medium text-gray-100">{option.title}</div>
+                  <div className="text-sm text-gray-400">{option.description}</div>
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+        
+        <div className="p-6 border-t border-gray-700 flex justify-end">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 transition-colors"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function AddNote() {
   const navigate = useNavigate();
   const addNote = useNotesStore((s) => s.addNote);
@@ -88,9 +160,10 @@ function AddNote() {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [tagsInput, setTagsInput] = useState("");
-  const [type, setType] = useState<"private" | "default">("default"); // State baru untuk type
+  const [type, setType] = useState<"private" | "default">("default");
   const [thumbnail, setThumbnail] = useState<string | null>(null);
   const [showMediaModal, setShowMediaModal] = useState(false);
+  const [showVisibilityModal, setShowVisibilityModal] = useState(false);
   const [activeTab, setActiveTab] = useState<"gallery" | "upload">("gallery");
   const [galleryFiles, setGalleryFiles] = useState<GalleryFile[]>([]);
   const [loadingGallery, setLoadingGallery] = useState(false);
@@ -103,6 +176,7 @@ function AddNote() {
   const [err, setErr] = useState<string | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const quillRef = useRef<ReactQuill>(null);
 
   // Fetch gallery files
   useEffect(() => {
@@ -248,11 +322,16 @@ function AddNote() {
     setThumbnail(null);
   };
 
+  const handleSelectVisibility = (visibilityType: "private" | "default") => {
+    setType(visibilityType);
+    setShowVisibilityModal(false);
+  };
+
   return (
     <div className="min-h-screen bg-gray-900">
       {/* Header */}
       <div className="bg-gradient-to-r from-gray-800 to-gray-900 border-b border-gray-700">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center space-x-4">
             <button
               onClick={handleCancel}
@@ -262,25 +341,21 @@ function AddNote() {
             </button>
             <div>
               <h1 className="text-2xl font-bold text-gray-100">Create New Note</h1>
-              <p className="text-gray-400 text-sm">Rich text editor (Quill.js)</p>
+              <p className="text-gray-400 text-sm">What do you want to talk about?</p>
             </div>
           </div>
         </div>
       </div>
 
       {/* Form */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <form onSubmit={onSubmit} className="space-y-6">
           <div className="bg-gray-800 border border-gray-700 rounded-xl shadow-xl overflow-hidden">
-            {/* Title */}
-            <div className="p-6 border-b border-gray-700">
-              <div className="flex items-center space-x-2 mb-3">
-                <Type className="w-5 h-5 text-gray-400" />
-                <label className="text-sm font-medium text-gray-300">Title</label>
-              </div>
+            {/* Title - Large placeholder style */}
+            <div className="px-6 pt-6 pb-0">
               <input
-                className="w-full bg-transparent border-none outline-none text-2xl font-bold text-gray-100 placeholder-gray-500"
-                placeholder="Enter note title..."
+                className="w-full bg-transparent border-none outline-none text-3xl font-bold text-gray-100 placeholder-gray-500"
+                placeholder="Posting ke Semua orang..."
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 required
@@ -288,21 +363,19 @@ function AddNote() {
               />
             </div>
 
-            {/* Tags */}
-            <div className="p-6 border-b border-gray-700">
+            {/* Tags - Hidden input but shows tags */}
+            <div className="px-6 pt-2 pb-0">
               <div className="flex items-center space-x-2 mb-3">
-                <Tag className="w-5 h-5 text-gray-400" />
-                <label className="text-sm font-medium text-gray-300">Tags</label>
+                <Tag className="w-4 h-4 text-gray-400" />
+                <input
+                  className="w-full bg-transparent border-none outline-none text-gray-100 placeholder-gray-600"
+                  placeholder="work, ideas, project..."
+                  value={tagsInput}
+                  onChange={(e) => setTagsInput(e.target.value)}
+                />
               </div>
-              <input
-                className="w-full bg-gray-700 border border-gray-600 text-gray-100 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all placeholder-gray-400"
-                placeholder="Add tags separated by commas (e.g. work, ideas, project)"
-                value={tagsInput}
-                onChange={(e) => setTagsInput(e.target.value)}
-                required
-              />
               {tagsInput && (
-                <div className="mt-3 flex flex-wrap gap-2">
+                <div className="my-4 flex flex-wrap gap-2">
                   {tagsInput.split(',').map((tag, index) => {
                     const trimmedTag = tag.trim();
                     return trimmedTag ? (
@@ -319,81 +392,66 @@ function AddNote() {
               )}
             </div>
 
-            {/* Type - Dropdown baru */}
-            <div className="p-6 border-b border-gray-700">
-              <div className="flex items-center space-x-2 mb-3">
-                {type === "private" ? (
-                  <Lock className="w-5 h-5 text-gray-400" />
-                ) : (
-                  <Globe className="w-5 h-5 text-gray-400" />
-                )}
-                <label className="text-sm font-medium text-gray-300">Visibility</label>
+            {/* Visibility Display */}
+            <div className="px-6 pb-2 pt-0">
+              <div className="flex items-center space-x-2 text-gray-300">
+                {/* Visibility Button */}
+                <button
+                  type="button"
+                  onClick={() => setShowVisibilityModal(true)}
+                  className="flex items-center space-x-2 px-2 py-2 bg-gray-700 text-gray-300 rounded-full hover:bg-gray-600 transition-colors"
+                >
+                  {type === "private" ? (
+                    <Lock className="w-4 h-4 text-purple-400" />
+                  ) : (
+                    <Earth className="w-4 h-4 text-blue-400" />
+                  )}
+                </button>
+                {/* Thumbnail Button */}
+                <button
+                  type="button"
+                  onClick={() => setShowMediaModal(true)}
+                  className="flex items-center space-x-2 px-2 py-2 bg-gray-700 text-gray-300 rounded-full hover:bg-gray-600 transition-colors"
+                >
+                  <ImageIcon className="w-4 h-4" />
+                  {thumbnail && (
+                    <span className="text-sm">Change Image</span>
+                  )}
+                </button>
               </div>
-              <select
-                className="w-full bg-gray-700 border border-gray-600 text-gray-100 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                value={type}
-                onChange={(e) => setType(e.target.value as "private" | "default")}
-                required
-              >
-                <option value="default">Public (Default)</option>
-                <option value="private">Private</option>
-              </select>
-              <p className="text-gray-400 text-sm mt-2">
-                {type === "private" 
-                  ? "Only you can see this note" 
-                  : "This note will be visible to everyone"}
-              </p>
             </div>
 
-            {/* Thumbnail */}
-            <div className="p-6 border-b border-gray-700">
-              <div className="flex items-center space-x-2 mb-3">
-                <ImageIcon className="w-5 h-5 text-gray-400" />
-                <label className="text-sm font-medium text-gray-300">Thumbnail</label>
-              </div>
-              
-              {thumbnail ? (
-                <div className="relative">
+            {/* Thumbnail Display */}
+            {thumbnail && (
+              <div className="p-6 border-b border-gray-700">
+                <div className="relative inline-block">
                   <img 
                     src={`https://minio-s3.radarku.online/radarku-bucket/notes_app/${thumbnail}`}
                     alt="Thumbnail preview"
-                    className="w-full h-48 object-cover rounded-lg"
+                    className="w-32 h-32 object-cover rounded-lg"
                   />
                   <button
                     type="button"
                     onClick={handleRemoveThumbnail}
-                    className="absolute top-2 right-2 p-2 bg-red-600 hover:bg-red-700 text-white rounded-full"
+                    className="absolute -top-2 -right-2 p-1 bg-red-600 hover:bg-red-700 text-white rounded-full"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="w-3 h-3" />
                   </button>
                 </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setShowMediaModal(true)}
-                  className="flex items-center justify-center w-full h-32 border-2 border-dashed border-gray-600 rounded-lg text-gray-400 hover:text-gray-200 hover:border-gray-500 transition-colors"
-                >
-                  <Plus className="w-6 h-6 mr-2" />
-                  Add Thumbnail
-                </button>
-              )}
-            </div>
-
-            {/* Content */}
-            <div className="p-6">
-              <div className="flex items-center space-x-2 mb-3">
-                <FileText className="w-5 h-5 text-gray-400" />
-                <label className="text-sm font-medium text-gray-300">Content</label>
               </div>
+            )}
 
-              <div className="bg-gray-700 border border-gray-600 rounded-lg overflow-hidden">
-                <ReactQuill
+            {/* Rich Text Editor */}
+            <div className="px-6 pt-2 pb-6">
+              <div className="bg-gray-600 border border-gray-500 rounded-lg overflow-hidden">
+                  <ReactQuill
                   value={body}
                   onChange={handleEditorChange}
                   modules={quillModules}
                   formats={quillFormats}
-                  placeholder="Write your amazing content here..."
+                  placeholder="Write your comment here..."
                   theme="snow"
+                  className="auto-resize-quill"
                 />
               </div>
             </div>
@@ -407,26 +465,36 @@ function AddNote() {
               </div>
             )}
 
-            {/* Actions */}
-            <div className="p-6 bg-gray-700/30 border-t border-gray-700 flex flex-col sm:flex-row gap-3 sm:justify-end">
-              <button
-                type="button"
-                onClick={handleCancel}
-                className="flex items-center px-6 py-3 text-gray-300 border border-gray-600 rounded-lg hover:bg-gray-700 hover:border-gray-500 transition-colors"
-              >
-                <X className="w-4 h-4 mr-1" /> Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={loading}
-                className="flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-lg hover:from-blue-700 hover:to-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                <Save className="w-4 h-4 mr-1" />
-                {loading ? "Saving..." : "Save Note"}
-              </button>
+            {/* Action Buttons */}
+            <div className="p-6 bg-gray-700/30 border-t border-gray-700 flex items-center justify-end">
+              {/* Right side - Save and Cancel */}
+              <div className="flex items-center space-x-3">
+                <button
+                  type="button"
+                  onClick={handleCancel}
+                  className="px-6 py-2 text-gray-300 border border-gray-600 rounded-lg hover:bg-gray-700 hover:border-gray-500 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="px-6 py-2 bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-lg hover:from-blue-700 hover:to-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {loading ? "Posting..." : "Post"}
+                </button>
+              </div>
             </div>
           </div>
         </form>
+
+        {/* Visibility Modal */}
+        <VisibilityModal
+          isOpen={showVisibilityModal}
+          onClose={() => setShowVisibilityModal(false)}
+          selectedType={type}
+          onSelect={handleSelectVisibility}
+        />
 
         {/* Media Modal */}
         {showMediaModal && (

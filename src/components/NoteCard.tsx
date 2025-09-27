@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { useNotesStore } from "../store/note";
-import { Edit3, Trash2, Tag, Clock, User, Eye, MessageCircle, Heart } from "lucide-react";
+import { Edit3, Trash2, Tag, Clock, User, Eye, MessageCircle, UserCheck } from "lucide-react";
 import { useState } from "react";
 import DOMPurify from "dompurify";
 
@@ -16,14 +16,14 @@ interface Props {
         username?: string;
         is_editable?: boolean;
         is_deletable?: boolean;
+        total_daily_notes: number;
+        total_daily_notes_mine: number;
     }
 }
 
 function NoteCard({ note }: Props) {
     const deleteNote = useNotesStore((state) => state.deleteNote);
     const [isDeleting, setIsDeleting] = useState(false);
-
-    console.log(note)
     
     const handleDelete = async () => {
         if (!confirm("Hapus catatan ini?")) return;
@@ -182,15 +182,15 @@ function NoteCard({ note }: Props) {
             <div className="p-4 border-t border-gray-700 bg-gray-800/50">
                 <div className="flex items-center justify-between">
                     {/* Engagement buttons (placeholder) */}
-                    <div className="flex items-center space-x-4">
-                        <button className="flex items-center space-x-1 text-gray-400 hover:text-red-400 transition-colors">
-                            <Heart className="w-4 h-4" />
-                            <span className="text-sm">0</span>
-                        </button>
-                        <button className="flex items-center space-x-1 text-gray-400 hover:text-blue-400 transition-colors">
-                            <MessageCircle className="w-4 h-4" />
-                            <span className="text-sm">0</span>
-                        </button>
+                    <div className="flex items-center space-x-3">
+                        <div className="flex items-center space-x-1 text-gray-400 bg-gray-700/50 px-1 py-1 rounded-lg border border-gray-600">
+                            <MessageCircle className="w-3 h-3" />
+                            <span className="text-xs"> {note.total_daily_notes || 0}</span>
+                        </div>
+                        <div className="flex items-center space-x-1 text-blue-400 bg-gray-700/50 px-1 py-1 rounded-lg border border-gray-600">
+                            <UserCheck className="w-3 h-3" />
+                            <span className="text-xs"> {note.total_daily_notes_mine || 0}</span>
+                        </div>
                     </div>
 
                     {/* Main Actions */}
@@ -198,7 +198,7 @@ function NoteCard({ note }: Props) {
                         {/* View button - always visible */}
                         <Link 
                             to={`/notes/${note.id}`}
-                            className="px-3 py-1.5 bg-gradient-to-r from-blue-600 to-blue-500 text-white text-sm rounded-lg hover:from-blue-700 hover:to-blue-600 transition-all duration-200 shadow-lg hover:shadow-blue-500/25"
+                            className="px-2 py-1 bg-gradient-to-r from-blue-600 to-blue-500 text-white text-xs rounded-md hover:from-blue-700 hover:to-blue-600 transition-all duration-200 shadow hover:shadow-blue-500/20"
                         >
                             View
                         </Link>
@@ -208,7 +208,7 @@ function NoteCard({ note }: Props) {
                             <button 
                                 onClick={handleDelete}
                                 disabled={isDeleting}
-                                className="px-3 py-1.5 bg-gradient-to-r from-red-600 to-red-500 text-white text-sm rounded-lg hover:from-red-700 hover:to-red-600 transition-all duration-200 shadow-lg hover:shadow-red-500/25 disabled:opacity-50"
+                                className="px-2 py-1 bg-gradient-to-r from-red-600 to-red-500 text-white text-xs rounded-md hover:from-red-700 hover:to-red-600 transition-all duration-200 shadow hover:shadow-red-500/20 disabled:opacity-50"
                             >
                                 {isDeleting ? 'Deleting...' : 'Delete'}
                             </button>

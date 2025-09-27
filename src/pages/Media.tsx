@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { Upload, Image, File, X, CheckCircle, AlertCircle, Download, Trash2, Eye, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react";
 import { apiClient, apiClientWithPagination } from "../api/client";
+import ImageViewModal from "../components/ImageViewModal";
+import DeleteConfirmationModal from "../components/DeleteConfirmationModal";
 
 interface UploadedFile {
   id: string;
@@ -52,6 +54,12 @@ export default function Media() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [storageInfo, setStorageInfo] = useState<{ total: number; used: number }>({ total: 0, used: 0 });
+
+  // modal view image
+  const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<GalleryFile | null>(null);
+  const [deleting, setDeleting] = useState(false);
   
   // Pagination state from backend
   const [currentPage, setCurrentPage] = useState(1);
@@ -76,7 +84,6 @@ export default function Media() {
     setLoadingGallery(true);
     try {
       const response: GalleryResponse = await apiClientWithPagination(`/files/notes_app?page=${page}&limit=10`, "GET");
-      console.log(response)
       
       // Construct full URLs for each file
       const filesWithUrls = response.data.files.map(file => ({
@@ -185,18 +192,59 @@ export default function Media() {
     }
   };
 
-  const handleDeleteFile = async (fileId: string, fileName: string) => {
-    if (!confirm(`Are you sure you want to delete "${fileName}"?`)) return;
+  // Fungsi untuk handle view image
+  const handleViewImage = (file: GalleryFile) => {
+    setSelectedFile(file);
+    setViewModalOpen(true);
+  };
 
+  // Fungsi untuk handle delete confirmation
+  const handleDeleteClick = (file: GalleryFile) => {
+    setSelectedFile(file);
+    setDeleteModalOpen(true);
+  };
+
+  // Fungsi untuk handle confirm delete
+  const handleConfirmDelete = async () => {
+    if (!selectedFile) return;
+    
+    setDeleting(true);
     try {
-      await apiClient(`/files/notes_app/${fileId}`, "DELETE");
-      setSuccess(`File "${fileName}" deleted successfully`);
+      await apiClient(`/files/notes_app/${selectedFile.id}`, "DELETE");
+      setSuccess(`File "${selectedFile.name}" deleted successfully`);
+      setDeleteModalOpen(false);
+      setSelectedFile(null);
       
-      // Refresh gallery after delete (stay on current page if possible)
+      // Refresh gallery after delete
       const pageToFetch = currentPage;
       await fetchGalleryFiles(pageToFetch);
     } catch (err: any) {
       setError(err.response?.meta?.message || "Failed to delete file");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  // Fungsi untuk handle download
+  const handleDownload = async (file: GalleryFile) => {
+    const fileUrl = `https://minio-s3.radarku.online/radarku-bucket/${file.path}/${file.name}`;
+
+    try {
+      const response = await fetch(fileUrl);
+      if (!response.ok) {
+        throw new Error('Gagal mengambil file');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = file.name;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.log(`error : ${error}`);
     }
   };
 
@@ -296,7 +344,7 @@ export default function Media() {
               <div className="text-sm text-gray-300">
                 Storage: {formatFileSize(storageInfo.used)} / {formatFileSize(storageInfo.total)}
               </div>
-              <div className="w-32 h-2 bg-gray-600 rounded-full mt-1">
+              <div className="w-full h-2 bg-gray-600 rounded-full mt-1">
                 <div 
                   className="h-2 bg-blue-500 rounded-full transition-all"
                   style={{ width: formatStoragePercentage(storageInfo.used, storageInfo.total) }}
@@ -473,30 +521,29 @@ export default function Media() {
                         <img
                           src={`https://minio-s3.radarku.online/radarku-bucket/${file.path}/${file.name}`}
                           alt={file.name}
-                          className="w-full h-32 object-cover rounded-lg mb-2"
+                          className="w-full h-32 object-cover rounded-lg mb-2 cursor-pointer"
                           loading="lazy"
+                          onClick={() => handleViewImage(file)}
                         />
                         <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all duration-200 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100">
-                          <a
-                            href={`https://minio-s3.radarku.online/radarku-bucket/${file.path}/${file.name}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="p-2 bg-white bg-opacity-20 rounded-full mr-2 hover:bg-opacity-30"
-                            onClick={(e) => e.stopPropagation()}
+                          <button
+                            onClick={() => handleViewImage(file)}
+                            className="p-2 bg-white bg-opacity-20 rounded-full mr-2 hover:bg-opacity-30 transition-colors"
+                            title="View image"
                           >
                             <Eye className="w-4 h-4 text-white" />
-                          </a>
-                          <a
-                            href={`https://minio-s3.radarku.online/radarku-bucket/${file.path}/${file.name}`}
-                            download={file.name}
-                            className="p-2 bg-white bg-opacity-20 rounded-full mr-2 hover:bg-opacity-30"
-                            onClick={(e) => e.stopPropagation()}
+                          </button>
+                          <button
+                            onClick={() => handleDownload(file)}
+                            className="p-2 bg-white bg-opacity-20 rounded-full mr-2 hover:bg-opacity-30 transition-colors"
+                            title="Download file"
                           >
                             <Download className="w-4 h-4 text-white" />
-                          </a>
+                          </button>
                           <button
-                            onClick={() => handleDeleteFile(file.id, file.name)}
-                            className="p-2 bg-white bg-opacity-20 rounded-full hover:bg-opacity-30"
+                            onClick={() => handleDeleteClick(file)}
+                            className="p-2 bg-white bg-opacity-20 rounded-full hover:bg-opacity-30 transition-colors"
+                            title="Delete file"
                           >
                             <Trash2 className="w-4 h-4 text-white" />
                           </button>
@@ -528,25 +575,22 @@ export default function Media() {
                     {/* Action Buttons for non-image files */}
                     {!isImageFile(file.mime) && (
                       <div className="flex justify-between items-center mt-2 pt-2 border-t border-gray-600">
-                        <a
-                          href={file.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                        <button
+                          onClick={() => window.open(`https://minio-s3.radarku.online/radarku-bucket/${file.path}/${file.name}`, '_blank')}
                           className="text-blue-400 hover:text-blue-300 text-xs flex items-center"
                         >
                           <Eye className="w-3 h-3 mr-1" />
                           View
-                        </a>
-                        <a
-                          href={file.url}
-                          download={file.name}
+                        </button>
+                        <button
+                          onClick={() => handleDownload(file)}
                           className="text-green-400 hover:text-green-300 text-xs flex items-center"
                         >
                           <Download className="w-3 h-3 mr-1" />
                           Download
-                        </a>
+                        </button>
                         <button
-                          onClick={() => handleDeleteFile(file.id, file.name)}
+                          onClick={() => handleDeleteClick(file)}
                           className="text-red-400 hover:text-red-300 text-xs flex items-center"
                         >
                           <Trash2 className="w-3 h-3 mr-1" />
@@ -557,6 +601,29 @@ export default function Media() {
                   </div>
                 ))}
               </div>
+
+              {/* Image View Modal */}
+              <ImageViewModal
+                isOpen={viewModalOpen}
+                onClose={() => setViewModalOpen(false)}
+                imageUrl={selectedFile ? `https://minio-s3.radarku.online/radarku-bucket/${selectedFile.path}/${selectedFile.name}` : ''}
+                fileName={selectedFile?.name || ''}
+                fileSize={selectedFile?.size || 0}
+                uploadedAt={selectedFile?.created_at || ''}
+              />
+
+              {/* Delete Confirmation Modal */}
+              <DeleteConfirmationModal
+                isOpen={deleteModalOpen}
+                onClose={() => {
+                  setDeleteModalOpen(false);
+                  setSelectedFile(null);
+                }}
+                onConfirm={handleConfirmDelete}
+                fileName={selectedFile?.name || ''}
+                fileType={selectedFile ? (isImageFile(selectedFile.mime) ? 'image' : 'file') : 'file'}
+                isLoading={deleting}
+              />
 
               {/* Pagination */}
               {totalPages > 1 && (

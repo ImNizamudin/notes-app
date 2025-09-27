@@ -6,7 +6,7 @@ export interface Note {
   title: string;
   body: string;
   tags: string[];
-  thumbnail?: string; // Tambahkan properti thumbnail
+  thumbnail?: string;
   created_at?: string;
   updated_at?: string;
   user_owner?: {
