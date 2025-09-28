@@ -6,7 +6,8 @@ import CollaboratorInput from "../components/CollaboratorInput";
 import { 
   Save, X, ArrowLeft, FileText, Tag, Type, Clock, 
   Users, MinusCircle, PlusCircle, MessageCircle, Send, 
-  ImageIcon, Eye, Upload, AlertCircle, CheckCircle, RefreshCw, Trash2 
+  ImageIcon, Eye, Upload, AlertCircle, CheckCircle, RefreshCw, Trash2,
+  Lock, Globe, Earth
 } from "lucide-react";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
@@ -98,17 +99,87 @@ interface Collaboration {
   body: string;
 }
 
+// Modal untuk visibility options
+interface VisibilityModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  selectedType: "private" | "default";
+  onSelect: (type: "private" | "default") => void;
+}
+
+function VisibilityModal({ isOpen, onClose, selectedType, onSelect }: VisibilityModalProps) {
+  if (!isOpen) return null;
+
+  const options = [
+    {
+      value: "default" as const,
+      icon: Earth,
+      title: "Public",
+      description: "Visible to everyone",
+      color: "text-blue-400"
+    },
+    {
+      value: "private" as const,
+      icon: Lock,
+      title: "Private",
+      description: "Only visible to you",
+      color: "text-purple-400"
+    }
+  ];
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+      <div className="bg-gray-800 rounded-xl w-full max-w-md">
+        <div className="p-6 border-b border-gray-700">
+          <h2 className="text-xl font-bold text-gray-100">Select Visibility</h2>
+          <p className="text-gray-400 text-sm mt-1">Choose who can see this note</p>
+        </div>
+        
+        <div className="p-6 space-y-3">
+          {options.map((option) => (
+            <button
+              key={option.value}
+              onClick={() => onSelect(option.value)}
+              className={`w-full p-4 text-left rounded-lg border-2 transition-all ${
+                selectedType === option.value
+                  ? "border-blue-500 bg-blue-500/10"
+                  : "border-gray-600 bg-gray-700 hover:border-gray-500"
+              }`}
+            >
+              <div className="flex items-center space-x-3">
+                <option.icon className={`w-5 h-5 ${option.color}`} />
+                <div>
+                  <div className="font-medium text-gray-100">{option.title}</div>
+                  <div className="text-sm text-gray-400">{option.description}</div>
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+        
+        <div className="p-6 border-t border-gray-700 flex justify-end">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 transition-colors"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function EditNote() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
   const {  
-    collaborations, // data komentar
+    collaborations,
     loading: collaborationsLoading, 
     addOrUpdateComment, 
     deleteComment
   } = useCollaborationStore();
-  const [collaboratorId, setCollaboratorId] = useState("");
 
   const collaborationsComment = collaborations.filter((c) => c.body);
 
@@ -120,8 +191,10 @@ function EditNote() {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [tagsInput, setTagsInput] = useState("");
+  const [type, setType] = useState<"private" | "default">("default");
   const [thumbnail, setThumbnail] = useState<string | null>(null);
   const [showMediaModal, setShowMediaModal] = useState(false);
+  const [showVisibilityModal, setShowVisibilityModal] = useState(false);
   const [activeTab, setActiveTab] = useState<"gallery" | "upload">("gallery");
   const [galleryFiles, setGalleryFiles] = useState<GalleryFile[]>([]);
   const [loadingGallery, setLoadingGallery] = useState(false);
@@ -133,11 +206,7 @@ function EditNote() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  
-  // State untuk komentar
-  const [newComment, setNewComment] = useState("");
-  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
-  const [editCommentText, setEditCommentText] = useState("");
+  const [showCollaboratorModal, setShowCollaboratorModal] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -151,6 +220,7 @@ function EditNote() {
         setTitle(local.title);
         setBody(local.body);
         setTagsInput(local.tags.join(", "));
+        setType(local.type || "default");
         setThumbnail(local.thumbnail || null);
         setLoading(false);
       } else {
@@ -160,6 +230,7 @@ function EditNote() {
           setTitle(data.title);
           setBody(data.body);
           setTagsInput(data.tags?.join(", ") || "");
+          setType(data.type || "default");
           setThumbnail(data.thumbnail || null);
         } catch (e: any) {
           setErr(e.message || "Gagal memuat note");
@@ -277,7 +348,13 @@ function EditNote() {
         .split(",")
         .map((t) => t.trim())
         .filter(Boolean);
-      await updateNote(id, { title, body, tags, thumbnail: thumbnail || undefined });
+      await updateNote(id, { 
+        title, 
+        body, 
+        tags, 
+        type,
+        thumbnail: thumbnail || undefined 
+      });
 
       navigate(`/notes/${id}`);
     } catch (e: any) {
@@ -295,6 +372,7 @@ function EditNote() {
     title !== initial.title ||
     body !== initial.body ||
     tagsInput !== initial.tags?.join(", ") ||
+    type !== (initial.type || "default") ||
     thumbnail !== (initial.thumbnail || null)
   );
 
@@ -323,41 +401,6 @@ function EditNote() {
     }
   };
 
-  // Fungsi untuk menambah komentar
-  const handleAddComment = async () => {
-    if (!id || !newComment.trim()) return;
-    
-    try {
-      await addOrUpdateComment(parseInt(id), newComment);
-      setNewComment("");
-    } catch (error) {
-      // Error sudah dihandle oleh store
-    }
-  };
-
-  const handleEditComment = async (collabId: string) => {
-    if (!editCommentText.trim()) return;
-    if (!id) return;
-    
-    try {
-      await addOrUpdateComment(Number(id), editCommentText);
-      setEditingCommentId(null);
-      setEditCommentText("");
-    } catch (error) {
-      // Error sudah dihandle oleh store
-    }
-  };
-
-  const handleDeleteComment = async (collabId: string) => {
-    if (!confirm("Apakah Anda yakin ingin menghapus komentar ini?")) return;
-    
-    try {
-      await deleteComment(collabId);
-    } catch (error) {
-      // Error sudah dihandle oleh store
-    }
-  };
-
   const handleSelectThumbnail = (fileName: string) => {
     setThumbnail(fileName);
     setShowMediaModal(false);
@@ -365,6 +408,11 @@ function EditNote() {
 
   const handleRemoveThumbnail = () => {
     setThumbnail(null);
+  };
+
+  const handleSelectVisibility = (visibilityType: "private" | "default") => {
+    setType(visibilityType);
+    setShowVisibilityModal(false);
   };
 
   return (
@@ -408,15 +456,11 @@ function EditNote() {
           <form onSubmit={onSubmit} className="space-y-6">
             <div className="bg-gray-800 border border-gray-700 rounded-xl shadow-xl overflow-hidden">
               
-              {/* Title Section */}
-              <div className="p-6 border-b border-gray-700">
-                <div className="flex items-center space-x-2 mb-3">
-                  <Type className="w-5 h-5 text-gray-400" />
-                  <label className="text-sm font-medium text-gray-300">Title</label>
-                </div>
+              {/* Title - Large placeholder style seperti AddNote */}
+              <div className="px-6 pt-6 pb-0">
                 <input
-                  className="w-full bg-transparent border-none outline-none text-2xl font-bold text-gray-100 placeholder-gray-500"
-                  placeholder="Enter note title..."
+                  className="w-full bg-transparent border-none outline-none text-3xl font-bold text-gray-100 placeholder-gray-500"
+                  placeholder="Posting ke Semua orang..."
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   required
@@ -424,20 +468,19 @@ function EditNote() {
                 />
               </div>
 
-              {/* Tags Section */}
-              <div className="p-6 border-b border-gray-700">
+              {/* Tags - Hidden input but shows tags seperti AddNote */}
+              <div className="px-6 pt-2 pb-0">
                 <div className="flex items-center space-x-2 mb-3">
-                  <Tag className="w-5 h-5 text-gray-400" />
-                  <label className="text-sm font-medium text-gray-300">Tags</label>
+                  <Tag className="w-4 h-4 text-gray-400" />
+                  <input
+                    className="w-full bg-transparent border-none outline-none text-gray-100 placeholder-gray-600"
+                    placeholder="work, ideas, project..."
+                    value={tagsInput}
+                    onChange={(e) => setTagsInput(e.target.value)}
+                  />
                 </div>
-                <input
-                  className="w-full bg-gray-700 border border-gray-600 text-gray-100 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all placeholder-gray-400"
-                  placeholder="Add tags separated by commas (e.g. work, ideas, project)"
-                  value={tagsInput}
-                  onChange={(e) => setTagsInput(e.target.value)}
-                />
                 {tagsInput && (
-                  <div className="mt-3 flex flex-wrap gap-2">
+                  <div className="my-4 flex flex-wrap gap-2">
                     {tagsInput.split(',').map((tag, index) => {
                       const trimmedTag = tag.trim();
                       return trimmedTag ? (
@@ -454,59 +497,77 @@ function EditNote() {
                 )}
               </div>
 
-              {/* Thumbnail Section */}
-              <div className="p-6 border-b border-gray-700">
-                <div className="flex items-center space-x-2 mb-3">
-                  <ImageIcon className="w-5 h-5 text-gray-400" />
-                  <label className="text-sm font-medium text-gray-300">Thumbnail</label>
+              {/* Visibility Display seperti AddNote */}
+              <div className="px-6 pb-2 pt-0">
+                <div className="flex items-center space-x-2 text-gray-300">
+                  {/* Visibility Button */}
+                  <button
+                    type="button"
+                    onClick={() => setShowVisibilityModal(true)}
+                    className="flex items-center space-x-2 px-2 py-2 bg-gray-700 text-gray-300 rounded-full hover:bg-gray-600 transition-colors"
+                  >
+                    {type === "private" ? (
+                      <Lock className="w-4 h-4 text-purple-400" />
+                    ) : (
+                      <Earth className="w-4 h-4 text-blue-400" />
+                    )}
+                  </button>
+                  {/* Collaborator Button */}
+                  <button
+                    type="button"
+                    onClick={() => setShowCollaboratorModal(true)}
+                    className="flex items-center space-x-2 px-2 py-2 bg-gray-700 text-gray-300 rounded-full hover:bg-gray-600 transition-colors"
+                    title="Manage Collaborators"
+                  >
+                    <Users className="w-4 h-4 text-green-400" />
+                  </button>
+                  {/* Thumbnail Button */}
+                  <button
+                    type="button"
+                    onClick={() => setShowMediaModal(true)}
+                    className="flex items-center space-x-2 px-2 py-2 bg-gray-700 text-gray-300 rounded-full hover:bg-gray-600 transition-colors"
+                  >
+                    <ImageIcon className="w-4 h-4" />
+                    {thumbnail && (
+                      <span className="text-sm">Change Image</span>
+                    )}
+                  </button>
                 </div>
-                
-                {thumbnail ? (
-                  <div className="relative">
+              </div>
+
+              {/* Thumbnail Display seperti AddNote */}
+              {thumbnail && (
+                <div className="px-6 pb-4">
+                  <div className="relative inline-block">
                     <img 
                       src={`https://minio-s3.radarku.online/radarku-bucket/notes_app/${thumbnail}`}
                       alt="Thumbnail preview"
-                      className="w-full h-48 object-cover rounded-lg"
+                      className="w-32 h-32 object-cover rounded-lg"
                     />
                     {/* Eye Icon untuk zoom */}
                     <a
                       href={`https://minio-s3.radarku.online/radarku-bucket/notes_app/${thumbnail}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="absolute top-2 right-12 p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full"
+                      className="absolute -top-2 -left-2 p-1 bg-blue-600 hover:bg-blue-700 text-white rounded-full"
                       title="View image in new tab"
                     >
-                        <Eye className="w-4 h-4" />
-                      </a>
+                      <Eye className="w-3 h-3" />
+                    </a>
                     <button
                       type="button"
                       onClick={handleRemoveThumbnail}
-                      className="absolute top-2 right-2 p-2 bg-red-600 hover:bg-red-700 text-white rounded-full"
+                      className="absolute -top-2 -right-2 p-1 bg-red-600 hover:bg-red-700 text-white rounded-full"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-3 h-3" />
                     </button>
                   </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setShowMediaModal(true)}
-                    className="flex items-center justify-center w-full h-32 border-2 border-dashed border-gray-600 rounded-lg text-gray-400 hover:text-gray-200 hover:border-gray-500 transition-colors"
-                  >
-                    <PlusCircle className="w-6 h-6 mr-2" />
-                    Add Thumbnail
-                  </button>
-                )}
-              </div>
-
-              {id && <CollaboratorInput noteId={parseInt(id)} />}
-
-              {/* Content Section */}
-              <div className="p-6 border-b border-gray-700">
-                <div className="flex items-center space-x-2 mb-3">
-                  <FileText className="w-5 h-5 text-gray-400" />
-                  <label className="text-sm font-medium text-gray-300">Content</label>
                 </div>
-                <div className="bg-gray-700 border border-gray-600 rounded-lg overflow-hidden">
+              )}
+
+              {/* Rich Text Editor seperti AddNote */}
+              <div className="px-6 pt-2 pb-6">
+                <div className="bg-gray-600 border border-gray-500 rounded-lg overflow-hidden">
                   <ReactQuill
                     value={body}
                     onChange={handleEditorChange}
@@ -514,6 +575,7 @@ function EditNote() {
                     formats={quillFormats}
                     placeholder="Write your amazing content here..."
                     theme="snow"
+                    className="auto-resize-quill"
                   />
                 </div>
               </div>
@@ -539,24 +601,24 @@ function EditNote() {
                 </div>
               )}
 
-              {/* Action Buttons */}
-              <div className="p-6 bg-gray-700/30 border-t border-gray-700 flex flex-col sm:flex-row gap-3 sm:justify-end">
-                <button
-                  type="button"
-                  onClick={handleCancel}
-                  className="flex items-center justify-center space-x-2 px-6 py-3 text-gray-300 border border-gray-600 rounded-lg hover:bg-gray-700 hover:border-gray-500 transition-all duration-200"
-                >
-                  <X className="w-4 h-4" />
-                  <span>Cancel</span>
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving || !hasChanges}
-                  className="flex items-center justify-center space-x-2 px-6 py-3 bg-gradient-to-r from-green-600 to-green-500 text-white rounded-lg hover:from-green-700 hover:to-green-600 transition-all duration-200 shadow-lg hover:shadow-green-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Save className="w-4 h-4" />
-                  <span>{saving ? "Saving Changes..." : "Save Changes"}</span>
-                </button>
+              {/* Action Buttons seperti AddNote */}
+              <div className="p-6 bg-gray-700/30 border-t border-gray-700 flex items-center justify-end">
+                <div className="flex items-center space-x-3">
+                  <button
+                    type="button"
+                    onClick={handleCancel}
+                    className="px-6 py-2 text-gray-300 border border-gray-600 rounded-lg hover:bg-gray-700 hover:border-gray-500 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={saving || !hasChanges}
+                    className="px-6 py-2 bg-gradient-to-r from-green-600 to-green-500 text-white rounded-lg hover:from-green-700 hover:to-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {saving ? "Saving..." : "Save Changes"}
+                  </button>
+                </div>
               </div>
             </div>
           </form>
@@ -572,6 +634,44 @@ function EditNote() {
               >
                 Back to Notes
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* Visibility Modal */}
+        <VisibilityModal
+          isOpen={showVisibilityModal}
+          onClose={() => setShowVisibilityModal(false)}
+          selectedType={type}
+          onSelect={handleSelectVisibility}
+        />
+
+        {/* Collaborator Modal */}
+        {showCollaboratorModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+            <div className="bg-gray-800 rounded-xl w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+              <div className="p-6 border-b border-gray-700 flex justify-between items-center">
+                <h2 className="text-xl font-bold text-gray-100">Manage Collaborators</h2>
+                <button
+                  onClick={() => setShowCollaboratorModal(false)}
+                  className="p-2 text-gray-400 hover:text-gray-200 hover:bg-gray-700 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              
+              <div className="p-6 overflow-y-auto flex-grow">
+                {id && <CollaboratorInput noteId={parseInt(id)} />}
+              </div>
+              
+              <div className="p-6 border-t border-gray-700 flex justify-end">
+                <button
+                  onClick={() => setShowCollaboratorModal(false)}
+                  className="px-6 py-3 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 transition-colors"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         )}

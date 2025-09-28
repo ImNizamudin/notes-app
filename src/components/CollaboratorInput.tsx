@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import apiClient from "../api/client";
 import { useCollaborationStore } from "../store/collaboration";
-import { Users, PlusCircle, X } from "lucide-react";
+import { Users, PlusCircle, X, Search, UserPlus, UserMinus } from "lucide-react";
 
 interface CollaboratorInputProps {
   noteId: number;
@@ -81,7 +81,6 @@ export default function CollaboratorInput({ noteId }: CollaboratorInputProps) {
   };
 
   const handleAddCollab = async (e?: React.FormEvent) => {
-    // Prevent default form submission behavior
     if (e) {
       e.preventDefault();
       e.stopPropagation();
@@ -91,7 +90,6 @@ export default function CollaboratorInput({ noteId }: CollaboratorInputProps) {
       try {
         await createCollaboration(selectedUserId, noteId);
         
-        // Dapatkan username user yang ditambahkan untuk notifikasi
         const addedUser = searchResults.find(user => user.id === selectedUserId);
         const username = addedUser?.username || selectedUserId;
         
@@ -100,16 +98,15 @@ export default function CollaboratorInput({ noteId }: CollaboratorInputProps) {
         setQuery("");
         setSearchResults([]);
         
-        // Refresh collaborators list
         fetchCollaborators(noteId);
       } catch (error) {
-        alert(`Failed to add collaborator: ${error.message}`);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        alert(`Failed to add collaborator: ${errorMessage}`);
       }
     }
   };
 
   const handleRemoveCollab = async (userId: string) => {
-    // Konfirmasi sebelum menghapus
     const userToRemove = collaborators.find(user => user.id === userId);
     const username = userToRemove?.username || userId;
     
@@ -122,122 +119,169 @@ export default function CollaboratorInput({ noteId }: CollaboratorInputProps) {
     try {
       await deleteCollaboration(userId, noteId);
       setSuccessMessage(`✅ Successfully removed ${username} from collaborators!`);
-      
-      // Refresh collaborators list
       fetchCollaborators(noteId);
     } catch (error) {
-      alert(`Failed to remove collaborator: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      alert(`Failed to remove collaborator: ${errorMessage}`);
     }
   };
 
-  // Handle form submission to prevent page reload
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     handleAddCollab();
   };
 
   return (
-    <div className="p-6 border-b border-gray-700">
-      <div className="flex items-center space-x-2 mb-3">
-        <Users className="w-5 h-5 text-gray-400" />
-        <label className="text-sm font-medium text-gray-300">Collaborators</label>
-      </div>
-
+    <div className="space-y-6">
       {/* Success Message */}
       {successMessage && (
-        <div className="bg-green-600 text-white p-3 rounded-lg mb-3">
-          {successMessage}
+        <div className="bg-green-900/50 border border-green-700 text-green-200 px-4 py-3 rounded-lg">
+          <div className="flex items-center space-x-2">
+            <span className="w-2 h-2 bg-green-400 rounded-full"></span>
+            <span className="text-sm">{successMessage}</span>
+          </div>
         </div>
       )}
 
       {/* Error Message */}
       {error && (
-        <div className="text-red-400 mb-3">{error}</div>
-      )}
-
-      {/* list collaborator */}
-      {loading ? (
-        <div className="text-gray-400 mb-3">Loading collaborators...</div>
-      ) : collaborators.length > 0 ? (
-        <div className="mb-4">
-          <h4 className="text-sm font-medium text-gray-300 mb-2">
-            Collaborators on this note:
-          </h4>
-          {collaborators.map((user) => (
-            <div key={user.id} className="flex items-center justify-between bg-gray-700 p-3 rounded mb-2">
-              <div>
-                <div className="text-gray-100 font-medium">{user.username}</div>
-                {user.fullname && (
-                  <div className="text-gray-400 text-sm">{user.fullname}</div>
-                )}
-              </div>
-              <button
-                onClick={() => handleRemoveCollab(user.id)}
-                className="text-red-400 hover:text-red-300 p-1 transition-colors"
-                title="Remove collaborator"
-                type="button" // Important: prevent form submission
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          ))}
+        <div className="bg-red-900/50 border border-red-700 text-red-200 px-4 py-3 rounded-lg">
+          <div className="flex items-center space-x-2">
+            <span className="w-2 h-2 bg-red-400 rounded-full"></span>
+            <span className="text-sm">{error}</span>
+          </div>
         </div>
-      ) : (
-        <div className="text-gray-400 mb-3">No collaborators yet</div>
       )}
 
-      {/* Search box untuk menambah collaborator baru */}
-      <div className="mt-4">
-        <h4 className="text-sm font-medium text-gray-300 mb-2">Add Collaborator:</h4>
-        
-        {/* Wrap in form to handle enter key, but prevent default submission */}
-        <form onSubmit={handleFormSubmit}>
-          <input
-            type="text"
-            placeholder="Search users by username..."
-            value={query}
-            onChange={(e) => handleSearch(e.target.value)}
-            className="w-full bg-gray-700 border border-gray-600 text-gray-100 rounded-lg px-4 py-2 placeholder-gray-400 mb-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </form>
+      {/* Current Collaborators Section */}
+      <div>
+        <h3 className="text-lg font-medium text-gray-300 mb-4 flex items-center space-x-2">
+          <Users className="w-5 h-5 text-blue-400" />
+          <span>Current Collaborators</span>
+          <span className="bg-blue-500 text-white text-xs px-2 py-1 rounded-full">
+            {collaborators.length}
+          </span>
+        </h3>
 
-        {isSearching && <div className="text-gray-400 mb-2">Searching...</div>}
-
-        {searchResults.length > 0 && (
-          <div className="bg-gray-800 border border-gray-700 rounded-lg mb-3 max-h-48 overflow-y-auto">
-            {searchResults.map((user) => (
-              <div 
-                key={user.id} 
-                className={`p-3 cursor-pointer text-gray-100 hover:bg-gray-700 transition-colors ${
-                  selectedUserId === user.id ? 'bg-gray-700' : ''
-                }`}
-                onClick={() => setSelectedUserId(user.id)}
-              >
-                <div className="font-medium">{user.username}</div>
-                {user.fullname && (
-                  <div className="text-sm text-gray-400">{user.fullname}</div>
-                )}
+        {loading ? (
+          <div className="flex items-center justify-center py-4">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+          </div>
+        ) : collaborators.length > 0 ? (
+          <div className="space-y-3">
+            {collaborators.map((user) => (
+              <div key={user.id} className="flex items-center justify-between bg-gray-700 p-4 rounded-lg border border-gray-600">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
+                    <span className="text-white font-medium text-sm">
+                      {user.username.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                  <div>
+                    <div className="text-gray-100 font-medium">{user.username}</div>
+                    {user.fullname && (
+                      <div className="text-gray-400 text-sm">{user.fullname}</div>
+                    )}
+                  </div>
+                </div>
+                <button
+                  onClick={() => handleRemoveCollab(user.id)}
+                  className="p-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors"
+                  title="Remove collaborator"
+                  type="button"
+                >
+                  <UserMinus className="w-4 h-4" />
+                </button>
               </div>
             ))}
           </div>
+        ) : (
+          <div className="bg-gray-700/50 border border-gray-600 rounded-lg p-6 text-center">
+            <Users className="w-12 h-12 text-gray-500 mx-auto mb-3" />
+            <p className="text-gray-400">No collaborators yet. Add someone to collaborate on this note.</p>
+          </div>
         )}
+      </div>
 
-        {query.length >= 2 && !isSearching && searchResults.length === 0 && (
-          <div className="text-gray-400 mb-2">No users found</div>
-        )}
+      {/* Add Collaborator Section */}
+      <div>
+        <h3 className="text-lg font-medium text-gray-300 mb-4 flex items-center space-x-2">
+          <UserPlus className="w-5 h-5 text-green-400" />
+          <span>Add New Collaborator</span>
+        </h3>
 
-        {selectedUserId && (
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              handleAddCollab();
-            }}
-            className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-500 transition-colors"
-            type="button" // Important: prevent form submission
-          >
-            <PlusCircle className="w-4 h-4 mr-1" /> Add Collaborator
-          </button>
-        )}
+        <form onSubmit={handleFormSubmit} className="space-y-4">
+          <div className="relative">
+            <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Search users by username..."
+              value={query}
+              onChange={(e) => handleSearch(e.target.value)}
+              className="w-full bg-gray-700 border border-gray-600 text-gray-100 rounded-lg pl-10 pr-4 py-3 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+
+          {isSearching && (
+            <div className="flex items-center justify-center py-4">
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500 mr-2"></div>
+              <span className="text-gray-400">Searching...</span>
+            </div>
+          )}
+
+          {searchResults.length > 0 && (
+            <div className="bg-gray-700 border border-gray-600 rounded-lg overflow-hidden">
+              {searchResults.map((user) => (
+                <div 
+                  key={user.id} 
+                  className={`p-3 cursor-pointer transition-colors border-b border-gray-600 last:border-b-0 ${
+                    selectedUserId === user.id 
+                      ? 'bg-blue-500/20 border-l-4 border-l-blue-500' 
+                      : 'hover:bg-gray-600'
+                  }`}
+                  onClick={() => setSelectedUserId(user.id)}
+                >
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                      <span className="text-white font-medium text-xs">
+                        {user.username.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-medium text-gray-100">{user.username}</div>
+                      {user.fullname && (
+                        <div className="text-sm text-gray-400">{user.fullname}</div>
+                      )}
+                    </div>
+                    {selectedUserId === user.id && (
+                      <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {query.length >= 2 && !isSearching && searchResults.length === 0 && (
+            <div className="bg-gray-700/50 border border-gray-600 rounded-lg p-4 text-center">
+              <p className="text-gray-400">No users found matching "{query}"</p>
+            </div>
+          )}
+
+          {selectedUserId && (
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                handleAddCollab();
+              }}
+              className="w-full flex items-center justify-center space-x-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              type="button"
+            >
+              <UserPlus className="w-4 h-4" />
+              <span>Add Collaborator</span>
+            </button>
+          )}
+        </form>
       </div>
     </div>
   );
