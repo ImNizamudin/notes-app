@@ -1,8 +1,7 @@
 import { Link } from "react-router-dom";
 import { useNotesStore } from "../store/note";
-import { Edit3, Trash2, Tag, Clock, User, Eye, MessageCircle, UserCheck } from "lucide-react";
+import { Edit3, Trash2, Tag, Clock, Eye, MessageCircle, UserCheck } from "lucide-react";
 import { useState } from "react";
-import DOMPurify from "dompurify";
 
 interface Props {
     note: {
@@ -53,28 +52,25 @@ function NoteCard({ note }: Props) {
     };
 
     const truncateText = (text: string, maxLength: number = 150) => {
-        // Strip HTML tags for plain text truncation
         const plainText = text.replace(/<[^>]*>/g, '');
         if (plainText.length <= maxLength) return plainText;
         return plainText.substring(0, maxLength) + '...';
     };
 
-    // Check permissions
     const canEdit = note.is_editable === true;
     const canDelete = note.is_deletable === true;
 
     return (
-        <div className="group bg-gray-800 border border-gray-700 rounded-xl overflow-hidden hover:shadow-xl hover:shadow-gray-900/20 transition-all duration-300 hover:border-gray-600">
+        <div className="group bg-gray-800 border border-gray-700 rounded-xl overflow-hidden hover:shadow-xl hover:shadow-gray-900/20 transition-all duration-300 hover:border-gray-600 flex flex-col h-full">
+            
             {/* User Profile Header */}
-            <div className="p-4 border-b border-gray-700">
+            <div className="p-4 border-b border-gray-700 flex-shrink-0">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
-                        {/* Profile Avatar */}
                         <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
                             {note.username}
                         </div>
                         
-                        {/* User Info */}
                         <div className="flex-1 min-w-0">
                             <h3 className="text-gray-200 font-medium text-sm truncate">
                                 {note.username}
@@ -86,9 +82,7 @@ function NoteCard({ note }: Props) {
                         </div>
                     </div>
 
-                    {/* Action Buttons - Only show on hover and based on permissions */}
                     <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        {/* View button - always visible */}
                         <Link 
                             to={`/notes/${note.id}`}
                             className="p-1.5 text-gray-400 hover:text-blue-400 hover:bg-gray-700 rounded-md transition-colors"
@@ -97,7 +91,6 @@ function NoteCard({ note }: Props) {
                             <Eye className="w-4 h-4" />
                         </Link>
                         
-                        {/* Edit button - only if editable */}
                         {canEdit && (
                             <Link 
                                 to={`/notes/${note.id}/edit`}
@@ -108,7 +101,6 @@ function NoteCard({ note }: Props) {
                             </Link>
                         )}
                         
-                        {/* Delete button - only if deletable */}
                         {canDelete && (
                             <button 
                                 onClick={handleDelete}
@@ -123,16 +115,16 @@ function NoteCard({ note }: Props) {
                 </div>
             </div>
 
-            {/* Note Content */}
-            <div className="p-4">
+            <div className="p-4 flex-grow flex flex-col">
+                
                 {/* Title */}
-                <h2 className="text-lg font-semibold text-gray-100 mb-3 line-clamp-2 leading-tight">
+                <h2 className="text-lg font-semibold text-gray-100 mb-3 line-clamp-2 leading-tight flex-shrink-0">
                     {note.title || 'Untitled Note'}
                 </h2>
 
                 {/* Tags */}
                 {note.tags && note.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 mb-3">
+                    <div className="flex flex-wrap gap-1.5 mb-3 flex-shrink-0">
                         {note.tags.slice(0, 3).map((tag, index) => (
                             <span 
                                 key={index} 
@@ -150,38 +142,34 @@ function NoteCard({ note }: Props) {
                     </div>
                 )}
 
-                {/* Body Preview */}
-                <div className="text-gray-400 text-sm mb-4 line-clamp-3 leading-relaxed">
+                <div className="text-gray-400 text-sm mb-4 line-clamp-3 leading-relaxed flex-grow">
                     {truncateText(note.body) || 'No content available'}
                 </div>
+
+                {note.thumbnail && (
+                    <div className="relative overflow-hidden mb-4 rounded-lg flex-shrink-0">
+                        <img 
+                            src={`https://minio-s3.radarku.online/radarku-bucket/notes_app/${note.thumbnail}`}
+                            alt="Note thumbnail"
+                            className="w-full h-32 object-cover hover:scale-105 transition-transform duration-300"
+                            loading="lazy"
+                        />
+                        <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-30 transition-all duration-300 flex items-center justify-center opacity-0 hover:opacity-100">
+                            <Link
+                                to={`/notes/${note.id}`}
+                                className="px-3 py-1 bg-white/20 backdrop-blur-sm text-white rounded-lg hover:bg-white/30 transition-colors text-xs"
+                            >
+                                <Eye className="w-3 h-3 inline mr-1" />
+                                View
+                            </Link>
+                        </div>
+                    </div>
+                )}
             </div>
 
-            {/* Thumbnail Image */}
-            {note.thumbnail && (
-                <div className="relative overflow-hidden">
-                    <img 
-                        src={`https://minio-s3.radarku.online/radarku-bucket/notes_app/${note.thumbnail}`}
-                        alt="Note thumbnail"
-                        className="w-full h-48 object-cover hover:scale-105 transition-transform duration-300"
-                        loading="lazy"
-                    />
-                    {/* Overlay with view button */}
-                    <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-30 transition-all duration-300 flex items-center justify-center opacity-0 hover:opacity-100">
-                        <Link
-                            to={`/notes/${note.id}`}
-                            className="px-4 py-2 bg-white/20 backdrop-blur-sm text-white rounded-lg hover:bg-white/30 transition-colors"
-                        >
-                            <Eye className="w-4 h-4 inline mr-2" />
-                            View Full
-                        </Link>
-                    </div>
-                </div>
-            )}
-
             {/* Footer Actions */}
-            <div className="p-4 border-t border-gray-700 bg-gray-800/50">
+            <div className="p-4 border-t border-gray-700 bg-gray-800/50 flex-shrink-0"> {/* Tambahkan flex-shrink-0 */}
                 <div className="flex items-center justify-between">
-                    {/* Engagement buttons (placeholder) */}
                     <div className="flex items-center space-x-3">
                         <div className="flex items-center space-x-1 text-gray-400 bg-gray-700/50 px-1 py-1 rounded-lg border border-gray-600">
                             <MessageCircle className="w-3 h-3" />
@@ -193,9 +181,7 @@ function NoteCard({ note }: Props) {
                         </div>
                     </div>
 
-                    {/* Main Actions */}
                     <div className="flex space-x-2">
-                        {/* View button - always visible */}
                         <Link 
                             to={`/notes/${note.id}`}
                             className="px-2 py-1 bg-gradient-to-r from-blue-600 to-blue-500 text-white text-xs rounded-md hover:from-blue-700 hover:to-blue-600 transition-all duration-200 shadow hover:shadow-blue-500/20"
@@ -203,7 +189,6 @@ function NoteCard({ note }: Props) {
                             View
                         </Link>
                         
-                        {/* Delete button - only if deletable */}
                         {canDelete && (
                             <button 
                                 onClick={handleDelete}

@@ -21,8 +21,6 @@ function NoteList() {
 
     return (
         <div className="min-h-screen bg-gray-900">
-            {/* <Navbar /> */}
-
             {/* Header Section */}
             <div className="bg-gradient-to-r from-gray-800 to-gray-900 border-b border-gray-700">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -108,7 +106,7 @@ function NoteList() {
                 ) : (
                     <div className={`${
                         viewMode === 'grid' 
-                            ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6' 
+                            ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 auto-rows-fr' // Perubahan di sini
                             : 'space-y-4'
                     }`}>
                         {filteredNotes.map((note) => (
