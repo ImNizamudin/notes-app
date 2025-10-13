@@ -2,28 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { useNotesStore, type Note } from "../store/note";
 import { useCollaborationStore } from "../store/collaboration";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import {
-  Edit3,
-  Trash2,
-  ArrowLeft,
-  Calendar,
-  Tag,
-  FileText,
-  User,
-  MessageCircle,
-  Send,
-  X,
-  Type,
-  ImageIcon,
-  Eye,
-  Plus,
-  RefreshCw,
-  Upload,
-  AlertCircle,
-  CheckCircle,
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
+import { Edit3, Trash2, ArrowLeft, Calendar, Tag, FileText, User, MessageCircle, Send, X, Type, ImageIcon, Eye, Plus, RefreshCw, Upload, AlertCircle, CheckCircle, ChevronLeft, ChevronRight, Clock, ImageOff } from "lucide-react";
 import DOMPurify from "dompurify";
 import hljs from "highlight.js";
 import "highlight.js/styles/github-dark.css";
@@ -33,6 +12,7 @@ import java from "highlight.js/lib/languages/java";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 import { apiClient } from "../api/client";
+import ImageViewModal from "../components/ImageViewModal";
 
 hljs.registerLanguage("javascript", javascript);
 hljs.registerLanguage("python", python);
@@ -81,6 +61,7 @@ interface GalleryFile {
   size: number;
   mime: string;
   tags: string[];
+  url?: string;
 }
 
 interface GalleryResponse {
@@ -107,7 +88,6 @@ function NoteDetail() {
   const deleteNote = useNotesStore((s) => s.deleteNote);
 
   const {
-    collaborations,
     comments,
     pagination,
     loading: collaborationsLoading,
@@ -125,7 +105,6 @@ function NoteDetail() {
   const [currentPage, setCurrentPage] = useState(1);
   const [commentsPerPage] = useState(10); // Bisa disesuaikan
 
-  const [newComment, setNewComment] = useState("");
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editCommentText, setEditCommentText] = useState("");
 
@@ -221,6 +200,7 @@ function NoteDetail() {
       setEditingCommentId(null);
       setEditCommentText("");
       setEditThumbnail(null);
+      setEditMode(false)
       // Reload current page
       await loadComments(currentPage);
     } catch (error: any) {
@@ -474,6 +454,24 @@ function NoteDetail() {
     );
   };
 
+  function getInitials(name: string): string {
+    return name
+      .trim() // buang spasi depan-belakang
+      .split(/\s+/) // pisah berdasarkan spasi
+      .map(word => word.charAt(0).toUpperCase()) // ambil huruf pertama, uppercase
+      .join('');
+  }
+
+  const [imgError, setImgError] = useState(false)
+  const [viewModalOpen, setViewModalOpen] = useState(false)
+  const [selectedImageUrl, setSelectedImageUrl] = useState("");
+  const [editMode, setEditMode] = useState<boolean>(false)
+
+  const handleViewImage = (imageUrl: string) => {
+    setSelectedImageUrl(imageUrl);
+    setViewModalOpen(true);
+  };
+
   // Check permissions for note
   const canEditNote = note?.is_editable === true;
   const canDeleteNote = note?.is_deletable === true;
@@ -520,85 +518,104 @@ function NoteDetail() {
           ) : note ? (
             <>
               {/* Note Header */}
-              <div className="border-b border-gray-700 p-6">
-                <div className="flex flex-col sm:flex-row justify-between items-start space-y-4 sm:space-y-0">
-                  <div className="flex-1">
-                    <h1 className="text-3xl font-bold text-gray-100 mb-3">{note.title}</h1>
-                    
-                    {/* Meta Info */}
-                    <div className="flex flex-wrap items-center gap-4 text-sm text-gray-400">
-                      <div className="flex items-center space-x-1">
-                        <Calendar className="w-4 h-4" />
-                        <span>Updated: {formatDate(note.updated_at || note.created_at)}</span>
-                      </div>
-                      {note.created_at && note.updated_at && note.created_at !== note.updated_at && (
-                        <div className="flex items-center space-x-1">
-                          <Calendar className="w-4 h-4" />
-                          <span>Created: {formatDate(note.created_at)}</span>
-                        </div>
-                      )}
-                      {note.user_owner?.fullname && (
-                        <div className="flex items-center space-x-1">
-                          <User className="w-4 h-4" />
-                          <span>Author: {note.user_owner.fullname}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  
-                  {/* Action Buttons - Conditional based on permissions */}
-                  {(canEditNote || canDeleteNote) && (
+              <div className="px-6 pt-6">
+                <div className="flex flex-col space-y-3">
+                  {/* Bagian 1: User Info & Action Buttons */}
+                  <div className="flex justify-between items-start">
+                    {/* User Info */}
                     <div className="flex items-center space-x-3">
-                      {canEditNote && (
-                        <Link
-                          to={`/notes/${note.id}/edit`}
-                          className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-lg hover:from-blue-700 hover:to-blue-600 transition-all duration-200 shadow-lg hover:shadow-blue-500/25"
-                        >
-                          <Edit3 className="w-4 h-4" />
-                          <span>Edit</span>
-                        </Link>
-                      )}
-                      {canDeleteNote && (
-                        <button
-                          onClick={onDelete}
-                          disabled={deleting}
-                          className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-red-600 to-red-500 text-white rounded-lg hover:from-red-700 hover:to-red-600 transition-all duration-200 shadow-lg hover:shadow-red-500/25 disabled:opacity-50"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                          <span>{deleting ? "Deleting..." : "Delete"}</span>
-                        </button>
-                      )}
+                      <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
+                        {getInitials(note.user_owner?.username || "")}
+                      </div>
+                      
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-gray-200 font-medium text-sm truncate">
+                          {note.user_owner?.username || note.user_owner?.fullname || 'Unknown user'}
+                        </h3>
+                        <div className="flex gap-2 text-xs text-gray-400">
+                          <div className="flex items-center space-x-2">
+                            <Clock className="w-3 h-3" />
+                            <span>{formatDate(note.created_at) || 'No date'}</span>
+                          </div>
+                          <span>{formatDate(note.created_at) !== formatDate(note.updated_at)
+                              ? '(Edited)'
+                              : ''}
+                          </span>
+                        </div>
+                      </div>
                     </div>
-                  )}
-                </div>
-
-                {/* Tags */}
-                {note.tags?.length ? (
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {note.tags.map((tag, index) => (
-                      <span
-                        key={index}
-                        className="inline-flex items-center space-x-1 bg-gray-700 text-gray-300 text-sm px-3 py-1 rounded-lg"
-                      >
-                        <Tag className="w-3 h-3" />
-                        <span>{tag}</span>
-                      </span>
-                    ))}
+                    
+                    {/* Action Buttons - Conditional based on permissions */}
+                    {(canEditNote || canDeleteNote) && (
+                      <div className="flex items-center space-x-3">
+                        {canEditNote && (
+                          <Link
+                            to={`/notes/${note.id}/edit`}
+                            className="flex items-center space-x-2 px-2 py-2 bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-lg hover:from-blue-700 hover:to-blue-600 transition-all duration-200 shadow-lg hover:shadow-blue-500/25"
+                          >
+                            <Edit3 className="w-3 h-3" />
+                            <span className="text-sm">Edit</span>
+                          </Link>
+                        )}
+                        {canDeleteNote && (
+                          <button
+                            onClick={onDelete}
+                            disabled={deleting}
+                            className="flex items-center space-x-2 px-2 py-2 bg-gradient-to-r from-red-600 to-red-500 text-white rounded-lg hover:from-red-700 hover:to-red-600 transition-all duration-200 shadow-lg hover:shadow-red-500/25 disabled:opacity-50"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                            <span className="text-sm">{deleting ? "Deleting..." : "Delete"}</span>
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
-                ) : null}
+
+                  {/* Bagian 2: Title dan Tags */}
+                  <div className="space-y-2">
+                    {/* Title */}
+                    <h1 className="text-3xl font-bold text-gray-100">{note.title}</h1>
+                    
+                    {/* Tags */}
+                    {note.tags?.length ? (
+                      <div className="flex flex-wrap gap-2">
+                        {note.tags.map((tag, index) => (
+                          <span
+                            key={index}
+                            className="inline-flex items-center space-x-1 bg-gray-700 text-gray-300 text-sm px-3 py-1 rounded-lg"
+                          >
+                            <Tag className="w-3 h-3" />
+                            <span>{tag}</span>
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
               </div>
 
               {/* Note Content */}
-              <div className="p-6 border-b border-gray-700">
-                <div className="mb-4 text-sm text-gray-400 flex items-center">
-                  <User className="w-4 h-4 mr-2" />
-                  <span>Created by: {note.user_owner?.username || 'Unknown author'}</span>
-                </div>
+              <div className="p-6 border-b border-gray-700 space-y-2">
+                {/* Bagian 3: Body Content */}
+                {note.body ? (
+                  <div className="prose prose-invert max-w-none">
+                    <div 
+                      className="ql-editor whitespace-pre-wrap text-gray-300 leading-relaxed font-sans"
+                      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(note.body) }}
+                    />
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <FileText className="w-12 h-12 text-gray-600 mx-auto mb-4" />
+                    <p className="text-gray-400 text-lg">This note is empty</p>
+                    <p className="text-gray-500 text-sm mt-2">Click Edit to add content</p>
+                  </div>
+                )}
 
-                {/* Thumbnail */}
+                {/* Bagian 4: Thumbnail Image */}
                 {note.thumbnail && (
-                  <div className="mb-6 rounded-lg overflow-hidden border border-gray-600 relative">
-                    <div className="flex items-center space-x-2 bg-gray-700 px-4 py-2">
+                  <div className="rounded-lg overflow-hidden relative">
+                    {/* <div className="flex items-center space-x-2 bg-gray-700 px-4 py-2">
                       <ImageIcon className="w-4 h-4 text-gray-400" />
                       <span className="text-sm text-gray-300">Thumbnail</span>
                     </div>
@@ -617,28 +634,34 @@ function NoteDetail() {
                       src={`https://minio-s3.radarku.online/radarku-bucket/notes_app/${note.thumbnail}`}
                       alt="Note thumbnail"
                       className="w-full h-64 object-cover"
-                    />
-                  </div>
-                )}
+                    /> */}
 
-                {note.body ? (
-                  <div className="prose prose-invert max-w-none">
-                    <pre className="whitespace-pre-wrap text-gray-300 leading-relaxed font-sans">
-                      <div 
-                        className="ql-editor"
-                        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(note.body) }}
-                      />
-                    </pre>
-                  </div>
-                ) : (
-                  <div className="text-center py-12">
-                    <FileText className="w-12 h-12 text-gray-600 mx-auto mb-4" />
-                    <p className="text-gray-400 text-lg">This note is empty</p>
-                    <p className="text-gray-500 text-sm mt-2">Click Edit to add content</p>
-                    {note.user_owner?.fullname && (
-                      <div className="mt-4 text-sm text-gray-500 flex items-center justify-center">
-                        <User className="w-4 h-4 mr-2" />
-                        <span>Created by: {note.user_owner.fullname}</span>
+                    
+                    {imgError ? (
+                      <div className="w-full h-32 flex flex-col items-center justify-center bg-gray-800 text-gray-300 text-xs">
+                        <ImageOff className="w-6 h-6 mb-1 opacity-80" />
+                        <span>Image failed to load</span>
+                      </div>
+                    ) : (
+                      <div className="relative inline-block overflow-hidden rounded-lg flex-shrink-0">
+                        <img 
+                          src={`https://minio-s3.radarku.online/radarku-bucket/notes_app/${note.thumbnail}`}
+                          alt="Note thumbnail"
+                          className="object-contain hover:scale-105 transition-transform duration-300"
+                          loading="lazy"
+                          onError={() => setImgError(true)}
+                        />
+                        <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-30 transition-all duration-300 flex items-center justify-center opacity-0 hover:opacity-100">
+                          <div 
+                            className="px-3 py-1 bg-white/20 backdrop-blur-sm text-white rounded-lg hover:bg-white/30 transition-colors text-xs"
+                            onClick={() => {
+                              handleViewImage(`https://minio-s3.radarku.online/radarku-bucket/notes_app/${note.thumbnail}`)
+                            }}
+                          >
+                            <Eye className="w-3 h-3 inline mr-1" />
+                            View
+                          </div>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -752,9 +775,15 @@ function NoteDetail() {
                                 <p className="text-gray-100 font-medium">
                                   {comment.user_name || 'Unknown User'}
                                 </p>
-                                <p className="text-gray-400 text-sm">
-                                  {formatDate(comment.created_at)}
-                                </p>
+                                <div className="flex gap-2 text-gray-400 text-sm">
+                                  <p>
+                                    {formatDate(comment.created_at)}
+                                  </p>
+                                  <span>{formatDate(comment.created_at) !== formatDate(comment.updated_at)
+                                      ? '(Edited)'
+                                      : ''}
+                                  </span>
+                                </div>
                               </div>
                             </div>
 
@@ -767,6 +796,7 @@ function NoteDetail() {
                                       setEditingCommentId(String(comment.id));
                                       setEditCommentText(comment.body || '');
                                       setEditThumbnail(comment.thumbnail || null);
+                                      setEditMode(true);
                                     }}
                                     className="text-gray-400 hover:text-blue-400 p-1"
                                     title="Edit comment"
@@ -788,7 +818,7 @@ function NoteDetail() {
                           </div>
 
                           {/* Comment Thumbnail */}
-                          {comment.thumbnail && (
+                          {comment.thumbnail && editMode==false && (
                             <div className="mb-3">
                               <a
                                 href={`https://minio-s3.radarku.online/radarku-bucket/notes_app/${comment.thumbnail}`}
@@ -806,21 +836,8 @@ function NoteDetail() {
                             </div>
                           )}
 
-                          {editingCommentId === String(comment.id) ? (
-                            <div className="space-y-4 mt-2">
-                              {/* Editor untuk edit komentar */}
-                              <div className="bg-gray-600 border border-gray-500 rounded-lg overflow-hidden">
-                                <ReactQuill
-                                  value={editCommentText}
-                                  onChange={setEditCommentText}
-                                  modules={quillModules}
-                                  formats={quillFormats}
-                                  theme="snow"
-                                  className="auto-resize-quill"
-                                />
-                              </div>
-
-                              {/* Thumbnail Editor Section */}
+                          {editingCommentId === String(comment.id) && (
+                            // Thumbnail Editor Section
                               <div className="flex items-center space-x-3">
                                 {editThumbnail ? (
                                   <div className="relative">
@@ -858,6 +875,60 @@ function NoteDetail() {
                                   </button>
                                 )}
                               </div>
+                          )}
+
+                          {editingCommentId === String(comment.id) ? (
+                            <div className="space-y-4 mt-2">
+                              {/* Editor untuk edit komentar */}
+                              <div className="bg-gray-600 border border-gray-500 rounded-lg overflow-hidden">
+                                <ReactQuill
+                                  value={editCommentText}
+                                  onChange={setEditCommentText}
+                                  modules={quillModules}
+                                  formats={quillFormats}
+                                  theme="snow"
+                                  className="auto-resize-quill"
+                                />
+                              </div>
+
+                              {/* Thumbnail Editor Section
+                              <div className="flex items-center space-x-3">
+                                {editThumbnail ? (
+                                  <div className="relative">
+                                    <a
+                                      href={`https://minio-s3.radarku.online/radarku-bucket/notes_app/${editThumbnail}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="block"
+                                      title="View image in new tab"
+                                    >
+                                      <img 
+                                        src={`https://minio-s3.radarku.online/radarku-bucket/notes_app/${editThumbnail}`}
+                                        alt="Thumbnail preview"
+                                        className="w-32 h-32 object-cover rounded-lg border border-gray-600"
+                                      />
+                                    </a>
+                                    <button
+                                      type="button"
+                                      onClick={() => setEditThumbnail(null)}
+                                      className="absolute -top-2 -right-2 p-1 bg-red-600 hover:bg-red-700 text-white rounded-full"
+                                      title="Remove thumbnail"
+                                    >
+                                      <X className="w-3 h-3" />
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => setShowMediaModal(true)}
+                                    className="flex items-center space-x-2 px-3 py-2 bg-gray-600 text-gray-300 rounded-lg hover:bg-gray-500 transition-colors"
+                                    title="Add thumbnail"
+                                  >
+                                    <ImageIcon className="w-4 h-4" />
+                                    <span className="text-sm">Change Image</span>
+                                  </button>
+                                )}
+                              </div> */}
 
                               {/* Action Buttons - DI KANAN */}
                               <div className="flex justify-end space-x-2 pt-2">
@@ -1119,6 +1190,13 @@ function NoteDetail() {
           </div>
         </div>
       )}
+      {/* Image View Modal */}
+      <ImageViewModal
+        isOpen={viewModalOpen}
+        onClose={() => setViewModalOpen(false)}
+        imageUrl={selectedImageUrl}
+        fileName={note?.thumbnail} // gunakan nama file sebagai fileName
+      />
     </div>
   );
 }

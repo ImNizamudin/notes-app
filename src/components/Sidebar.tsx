@@ -13,8 +13,6 @@ function Sidebar({ activeMenu, setActiveMenu }: SidebarProps) {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
-  
-  const [emailUserLogin, setEmailUserLogin] = useState<string | null>(user?.email || localStorage.getItem("USER") ? JSON.parse(localStorage.getItem("USER")!).email : null);
 
   const menuItems = [
     { id: 'notes', icon: FileText, label: 'Notes', path: '/' },
@@ -89,12 +87,12 @@ function Sidebar({ activeMenu, setActiveMenu }: SidebarProps) {
 
       {/* User Info & Logout */}
       <div className="p-2 border-t border-gray-700/50">
-        {sidebarExpanded && emailUserLogin && (
+        {sidebarExpanded && user?.email && (
           <div className="mb-3 px-3 py-2 bg-gray-700/50 rounded-lg">
             <div className="flex items-center space-x-2">
               <User className="w-4 h-4 text-gray-400" />
               <span className="text-sm text-gray-300 truncate">
-                {emailUserLogin}
+                {user?.email}
               </span>
             </div>
           </div>

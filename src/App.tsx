@@ -50,25 +50,25 @@ function setupGlobalErrorHandling() {
 
 function PrivateRoute({ children, activeMenu }: { children: JSX.Element; activeMenu?: string }) {
   const token = useAuthStore((s) => s.accessToken);
-  const logout = useAuthStore((s) => s.logout);
+  // const logout = useAuthStore((s) => s.logout);
 
-  useEffect(() => {
-    const checkTokenExpiry = () => {
-      const token = localStorage.getItem("ACCESS_TOKEN");
-      if (token) {
-        try {
-          const payload = JSON.parse(atob(token.split('.')[1]));
-          const exp = payload.exp * 1000;
-          if (Date.now() >= exp) { 
-            logout;
-          }
-        } catch {
-          logout;
-        }
-      }
-    };
+  // useEffect(() => {
+  //   const checkTokenExpiry = () => {
+  //     const token = localStorage.getItem("ACCESS_TOKEN");
+  //     if (token) {
+  //       try {
+  //         const payload = JSON.parse(atob(token.split('.')[1]));
+  //         const exp = payload.exp * 1000;
+  //         if (Date.now() >= exp) { 
+  //           logout;
+  //         }
+  //       } catch {
+  //         logout;
+  //       }
+  //     }
+  //   };
 
-  }, [logout]);
+  // }, [logout]);
 
   return token ? <MainLayout activeMenu={activeMenu}>{children}</MainLayout> : <Navigate to="/login" />;
 }
@@ -79,6 +79,17 @@ function PublicRoute({ children }: { children: JSX.Element }) {
 }
 
 export default function App() {
+  // const { initializeAuth } = useAuthStore();
+
+  // useEffect(() => {
+  //   setupGlobalErrorHandling();
+  //   initializeAuth();
+
+  //   return () => {
+  //     useAuthStore.getState().stopTokenRefresh();
+  //   }
+  // }, [initializeAuth]);
+
   useEffect(() => {
     setupGlobalErrorHandling();
   }, []);

@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { useNotesStore } from "../store/note";
-import { Edit3, Trash2, Tag, Clock, Eye, MessageCircle, UserCheck } from "lucide-react";
+import { Edit3, Trash2, Tag, Clock, Eye, MessageCircle, UserCheck, ImageOff } from "lucide-react";
 import { useState } from "react";
 
 interface Props {
@@ -44,7 +44,8 @@ function NoteCard({ note }: Props) {
                 month: 'short',
                 day: 'numeric',
                 hour: '2-digit',
-                minute: '2-digit'
+                minute: '2-digit',
+                year: 'numeric'
             });
         } catch {
             return '';
@@ -57,8 +58,18 @@ function NoteCard({ note }: Props) {
         return plainText.substring(0, maxLength) + '...';
     };
 
+    function getInitials(name: string): string {
+        return name
+            .trim() // buang spasi depan-belakang
+            .split(/\s+/) // pisah berdasarkan spasi
+            .map(word => word.charAt(0).toUpperCase()) // ambil huruf pertama, uppercase
+            .join('');
+    }
+
     const canEdit = note.is_editable === true;
     const canDelete = note.is_deletable === true;
+
+    const [imgError, setImgError ] = useState(false);
 
     return (
         <div className="group bg-gray-800 border border-gray-700 rounded-xl overflow-hidden hover:shadow-xl hover:shadow-gray-900/20 transition-all duration-300 hover:border-gray-600 flex flex-col h-full">
@@ -68,11 +79,11 @@ function NoteCard({ note }: Props) {
                 <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
                         <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
-                            {note.username}
+                            {getInitials(note.username || "")}
                         </div>
                         
                         <div className="flex-1 min-w-0">
-                            <h3 className="text-gray-200 font-medium text-sm truncate">
+                            <h3 className="text-gray-200 font-medium text-sm truncate w-20">
                                 {note.username}
                             </h3>
                             <div className="flex items-center space-x-2 text-xs text-gray-400">
@@ -148,21 +159,31 @@ function NoteCard({ note }: Props) {
 
                 {note.thumbnail && (
                     <div className="relative overflow-hidden mb-4 rounded-lg flex-shrink-0">
-                        <img 
-                            src={`https://minio-s3.radarku.online/radarku-bucket/notes_app/${note.thumbnail}`}
-                            alt="Note thumbnail"
-                            className="w-full h-32 object-cover hover:scale-105 transition-transform duration-300"
-                            loading="lazy"
-                        />
-                        <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-30 transition-all duration-300 flex items-center justify-center opacity-0 hover:opacity-100">
-                            <Link
-                                to={`/notes/${note.id}`}
-                                className="px-3 py-1 bg-white/20 backdrop-blur-sm text-white rounded-lg hover:bg-white/30 transition-colors text-xs"
-                            >
-                                <Eye className="w-3 h-3 inline mr-1" />
-                                View
-                            </Link>
-                        </div>
+                        {imgError ? (
+                            <div className="w-full h-32 flex flex-col items-center justify-center bg-gray-800 text-gray-300 text-xs">
+                                <ImageOff className="w-6 h-6 mb-1 opacity-80" />
+                                <span>Image failed to load</span>
+                            </div>
+                        ) : (
+                            <div>
+                                <img 
+                                    src={`https://minio-s3.radarku.online/radarku-bucket/notes_app/${note.thumbnail}`}
+                                    alt="Note thumbnail"
+                                    className="w-full h-32 object-cover hover:scale-105 transition-transform duration-300"
+                                    loading="lazy"
+                                    onError={() => setImgError(true)}
+                                />
+                                <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-30 transition-all duration-300 flex items-center justify-center opacity-0 hover:opacity-100">
+                                    <Link
+                                        to={`/notes/${note.id}`}
+                                        className="px-3 py-1 bg-white/20 backdrop-blur-sm text-white rounded-lg hover:bg-white/30 transition-colors text-xs"
+                                    >
+                                        <Eye className="w-3 h-3 inline mr-1" />
+                                        View
+                                    </Link>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

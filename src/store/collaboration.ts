@@ -224,7 +224,7 @@ export const useCollaborationStore = create<CollaborationState>((set, get) => ({
 
       return newCollaboration;
     } catch (err: any) {
-      const errorMessage = err.response?.data?.message || err.message || "Failed to add/update comment";
+      const errorMessage = err.response?.data?.message || err.message || err.response.meta.message || "Failed to add/update comment";
       set({ error: errorMessage });
       throw new Error(errorMessage);
     } finally {
