@@ -34,6 +34,8 @@ export default function CollaboratorInput({ noteId }: CollaboratorInputProps) {
     fetchCollaborators(noteId);
   }, [noteId, fetchCollaborators]);
 
+  console.log("Collaborators:", collaborators);
+
   // Clear success message setelah 3 detik
   useEffect(() => {
     if (successMessage) {

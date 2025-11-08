@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { useNotesStore, type Note } from "../store/note";
 import { useCollaborationStore } from "../store/collaboration";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { Edit3, Trash2, ArrowLeft, Calendar, Tag, FileText, User, MessageCircle, Send, X, Type, ImageIcon, Eye, Plus, RefreshCw, Upload, AlertCircle, CheckCircle, ChevronLeft, ChevronRight, Clock, ImageOff } from "lucide-react";
+import { Edit3, Trash2, ArrowLeft, Tag, FileText, Users, Lock, Globe, MessageCircle, Send, X, Type, ImageIcon, Eye, Plus, RefreshCw, Upload, AlertCircle, CheckCircle, ChevronLeft, ChevronRight, Clock, ImageOff } from "lucide-react";
 import DOMPurify from "dompurify";
 import hljs from "highlight.js";
 import "highlight.js/styles/github-dark.css";
@@ -472,6 +472,13 @@ function NoteDetail() {
     setViewModalOpen(true);
   };
 
+  const handleRedirectStudyTracker = () => {
+    if (!note) return;
+    navigate('/study_tracker', { 
+      state: { noteId: note.id, }
+    });
+  }
+
   // Check permissions for note
   const canEditNote = note?.is_editable === true;
   const canDeleteNote = note?.is_deletable === true;
@@ -572,25 +579,102 @@ function NoteDetail() {
                   </div>
 
                   {/* Bagian 2: Title dan Tags */}
-                  <div className="space-y-2">
-                    {/* Title */}
-                    <h1 className="text-3xl font-bold text-gray-100">{note.title}</h1>
-                    
-                    {/* Tags */}
-                    {note.tags?.length ? (
-                      <div className="flex flex-wrap gap-2">
-                        {note.tags.map((tag, index) => (
-                          <span
-                            key={index}
-                            className="inline-flex items-center space-x-1 bg-gray-700 text-gray-300 text-sm px-3 py-1 rounded-lg"
-                          >
-                            <Tag className="w-3 h-3" />
-                            <span>{tag}</span>
-                          </span>
-                        ))}
-                      </div>
-                    ) : null}
-                  </div>
+                  <div className="space-y-3">
+  {/* Title */}
+  <h1 className="text-3xl font-bold text-gray-100">{note.title}</h1>
+  
+  {/* Tags - Pindah ke bawah judul */}
+  {note.tags?.length ? (
+    <div className="flex flex-wrap gap-2">
+      {note.tags.map((tag, index) => (
+        <span
+          key={index}
+          className="inline-flex items-center space-x-1 bg-gray-700 text-gray-300 text-sm px-3 py-1 rounded-lg"
+        >
+          <Tag className="w-3 h-3" />
+          <span>{tag}</span>
+        </span>
+      ))}
+    </div>
+  ) : null}
+
+  {/* Metadata Row - Type, Visibility, Study Tracker Button */}
+  <div className="flex flex-wrap items-center gap-3">
+    {/* Type Badge */}
+    <div className="flex items-center space-x-2">
+      <span className={`inline-flex items-center space-x-1 px-3 py-1 rounded-lg text-sm font-medium ${
+        note.type === 'tracker' 
+          ? 'bg-orange-900/50 text-orange-300 border border-orange-700' 
+          : 'bg-blue-900/50 text-blue-300 border border-blue-700'
+      }`}>
+        {note.type === 'tracker' ? (
+          <RefreshCw className="w-3 h-3" />
+        ) : (
+          <FileText className="w-3 h-3" />
+        )}
+        <span className="capitalize">{note.type?.replace('_', ' ')}</span>
+      </span>
+    </div>
+
+    {/* Visibility Badge */}
+    <div className="flex items-center space-x-2">
+      <span className={`inline-flex items-center space-x-1 px-3 py-1 rounded-lg text-sm font-medium ${
+        note.visibility === 'public' 
+          ? 'bg-green-900/50 text-green-300 border border-green-700' 
+          : note.visibility === 'private'
+          ? 'bg-purple-900/50 text-purple-300 border border-purple-700'
+          : 'bg-blue-900/50 text-blue-300 border border-blue-700'
+      }`}>
+        {note.visibility === 'public' ? (
+          <Globe className="w-3 h-3" />
+        ) : note.visibility === 'private' ? (
+          <Lock className="w-3 h-3" />
+        ) : (
+          <Users className="w-3 h-3" />
+        )}
+        <span className="capitalize">{note.visibility}</span>
+      </span>
+    </div>
+
+    {/* Study Tracker Button - Hanya muncul jika type = tracker */}
+    {note.type === 'tracker' && (
+      // <Link
+      //   to="/study_trackers"
+      //   className="inline-flex items-center space-x-1 px-3 py-1 bg-indigo-900/50 text-indigo-300 border border-indigo-700 rounded-lg text-sm font-medium hover:bg-indigo-800/50 transition-colors"
+      // >
+      //   <RefreshCw className="w-3 h-3" />
+      //   <span>Study Tracker</span>
+      // </Link>
+      <button
+        onClick={handleRedirectStudyTracker}
+        className="inline-flex items-center space-x-1 px-3 py-1 bg-indigo-900/50 text-indigo-300 border border-indigo-700 rounded-lg text-sm font-medium hover:bg-indigo-800/50 transition-colors"
+      >
+        <RefreshCw className="w-3 h-3" />
+        <span>Study Tracker</span>
+      </button>
+    )}
+
+    {/* Collaborators Button (jika visibility collaboration) */}
+    {note.visibility === 'collaboration' && (
+      <button
+        onClick={() => {
+          // TODO: Implement modal untuk melihat/mengelola collaborators
+          console.log('Open collaborators modal');
+        }}
+        className="inline-flex items-center space-x-1 px-3 py-1 bg-indigo-900/50 text-indigo-300 border border-indigo-700 rounded-lg text-sm font-medium hover:bg-indigo-800/50 transition-colors"
+      >
+        <Users className="w-3 h-3" />
+        <span>Collaborators</span>
+        {note.user_collaborators && (
+          <span className="bg-indigo-600 text-white text-xs px-1.5 py-0.5 rounded-full">
+            {Array.isArray(note.user_collaborators) ? note.user_collaborators.length : 0}
+          </span>
+        )}
+      </button>
+    )}
+  </div>
+</div>
+                  
                 </div>
               </div>
 

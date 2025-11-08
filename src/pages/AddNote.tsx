@@ -86,8 +86,8 @@ interface GalleryResponse {
 interface VisibilityModalProps {
   isOpen: boolean;
   onClose: () => void;
-  selectedType: "private" | "default";
-  onSelect: (type: "private" | "default") => void;
+  selectedType: "private" | "collaboration" | "premium" | "public";
+  onSelect: (type: "private" | "collaboration" | "premium" | "public") => void;
 }
 
 function VisibilityModal({ isOpen, onClose, selectedType, onSelect }: VisibilityModalProps) {
@@ -95,7 +95,7 @@ function VisibilityModal({ isOpen, onClose, selectedType, onSelect }: Visibility
 
   const options = [
     {
-      value: "default" as const,
+      value: "public" as const,
       icon: Earth,
       title: "Public",
       description: "Visible to everyone",
@@ -153,6 +153,76 @@ function VisibilityModal({ isOpen, onClose, selectedType, onSelect }: Visibility
   );
 }
 
+interface TypeModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  selectedType: "tracker" | "daily_note";
+  onSelect: (type: "tracker" | "daily_note") => void;
+}
+
+function TypeModal({ isOpen, onClose, selectedType, onSelect } : TypeModalProps) {
+  if (!isOpen) return null;
+
+  const options = [
+    {
+      value: "daily_note" as const,
+      icon: FileText,
+      title: "Daily Note",
+      description: "Regular notes and thoughts",
+      color: "text-green-400"
+    },
+    {
+      value: "tracker" as const,
+      icon: RefreshCw,
+      title: "Tracker",
+      description: "Progress tracking and monitoring",
+      color: "text-orange-400"
+    }
+  ];
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+      <div className="bg-gray-800 rounded-xl w-full max-w-md">
+        <div className="p-6 border-b border-gray-700">
+          <h2 className="text-xl font-bold text-gray-100">Select Note Type</h2>
+          <p className="text-gray-400 text-sm mt-1">Choose the type of note</p>
+        </div>
+        
+        <div className="p-6 space-y-3">
+          {options.map((option) => (
+            <button
+              key={option.value}
+              onClick={() => onSelect(option.value)}
+              className={`w-full p-4 text-left rounded-lg border-2 transition-all ${
+                selectedType === option.value
+                  ? "border-blue-500 bg-blue-500/10"
+                  : "border-gray-600 bg-gray-700 hover:border-gray-500"
+              }`}
+            >
+              <div className="flex items-center space-x-3">
+                <option.icon className={`w-5 h-5 ${option.color}`} />
+                <div>
+                  <div className="font-medium text-gray-100">{option.title}</div>
+                  <div className="text-sm text-gray-400">{option.description}</div>
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+        
+        <div className="p-6 border-t border-gray-700 flex justify-end">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 transition-colors"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function AddNote() {
   const navigate = useNavigate();
   const addNote = useNotesStore((s) => s.addNote);
@@ -160,9 +230,11 @@ function AddNote() {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [tagsInput, setTagsInput] = useState("");
-  const [type, setType] = useState<"private" | "default">("default");
+  const [type, setType] = useState<"tracker" | "daily_note">("daily_note");
+  const [typeVisibility, setTypeVisibility] = useState<"private" | "collaboration" | "premium" | "public">("public");
   const [thumbnail, setThumbnail] = useState<string | null>(null);
   const [showMediaModal, setShowMediaModal] = useState(false);
+  const [showTypeModal, setShowTypeModal] = useState(false);
   const [showVisibilityModal, setShowVisibilityModal] = useState(false);
   const [activeTab, setActiveTab] = useState<"gallery" | "upload">("gallery");
   const [galleryFiles, setGalleryFiles] = useState<GalleryFile[]>([]);
@@ -287,7 +359,8 @@ function AddNote() {
         title,
         body,
         tags,
-        type, // Tambahkan type ke data yang dikirim
+        type,
+        visibility: typeVisibility,
         thumbnail: thumbnail || undefined,
       });
 
@@ -322,8 +395,13 @@ function AddNote() {
     setThumbnail(null);
   };
 
-  const handleSelectVisibility = (visibilityType: "private" | "default") => {
-    setType(visibilityType);
+  const handleSelectType = (noteType: "tracker" | "daily_note") => {
+    setType(noteType);
+    setShowTypeModal(false);
+  }
+
+  const handleSelectVisibility = (visibilityType: "private" | "collaboration" | "premium" | "public") => {
+    setTypeVisibility(visibilityType);
     setShowVisibilityModal(false);
   };
 
@@ -395,13 +473,27 @@ function AddNote() {
             {/* Visibility Display */}
             <div className="px-6 pb-2 pt-0">
               <div className="flex items-center space-x-2 text-gray-300">
+                {/* Type button */}
+                <button
+                  type="button"
+                  onClick={() => setShowTypeModal(true)}
+                  className="flex items-center space-x-2 px-3 py-2 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 transition-colors"
+                >
+                  {type === "tracker" ? (
+                    <RefreshCw className="w-4 h-4 text-orange-400" />
+                  ) : (
+                    <FileText className="w-4 h-4 text-green-400" />
+                  )}
+                  <span className="text-sm capitalize">{type.replace('_', ' ')}</span>
+                </button>
+
                 {/* Visibility Button */}
                 <button
                   type="button"
                   onClick={() => setShowVisibilityModal(true)}
                   className="flex items-center space-x-2 px-2 py-2 bg-gray-700 text-gray-300 rounded-full hover:bg-gray-600 transition-colors"
                 >
-                  {type === "private" ? (
+                  {typeVisibility === "private" ? (
                     <Lock className="w-4 h-4 text-purple-400" />
                   ) : (
                     <Earth className="w-4 h-4 text-blue-400" />
@@ -488,11 +580,19 @@ function AddNote() {
           </div>
         </form>
 
+        {/* Type Modal */}
+        <TypeModal
+          isOpen={showTypeModal}
+          onClose={() => setShowTypeModal(false)}
+          selectedType={type}
+          onSelect={handleSelectType}
+        />
+
         {/* Visibility Modal */}
         <VisibilityModal
           isOpen={showVisibilityModal}
           onClose={() => setShowVisibilityModal(false)}
-          selectedType={type}
+          selectedType={typeVisibility}
           onSelect={handleSelectVisibility}
         />
 

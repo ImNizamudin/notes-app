@@ -29,6 +29,7 @@ interface NotesState {
     body: string;
     tags?: string[];
     type?: string;
+    visibility?: string;
     thumbnail?: string; // Tambahkan thumbnail di payload
   }) => Promise<void>;
   updateNote: (

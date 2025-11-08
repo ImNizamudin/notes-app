@@ -10,6 +10,7 @@ import MainLayout from "./layouts/MainLayout";
 import EmailVerified from "./pages/EmailVerified";
 import VerifyEmailNotification from "./pages/VerifyEmailNotification";
 import VerifyEmail from "./pages/VerifyEmail";
+import StudyTrackers from "./pages/StudyTracker";
 import type { JSX } from "react";
 import Profile from "./pages/Profile";
 import Media from "./pages/Media";
@@ -166,6 +167,14 @@ export default function App() {
           element={
             <PrivateRoute activeMenu="profile">
               <Profile />
+            </PrivateRoute>
+          }
+        />
+        <Route 
+          path="/study_tracker"
+          element={
+            <PrivateRoute activeMenu="notes">
+              <StudyTrackers />
             </PrivateRoute>
           }
         />
