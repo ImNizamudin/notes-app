@@ -231,10 +231,10 @@ function NoteDetail() {
     }
   };
 
-  const handleDeleteComment = async (collabId: string) => {
-    if (!confirm("Apakah Anda yakin ingin menghapus komentar ini?")) return;
+  const handleDeleteComment = async (collabId: string, noteId: number) => {
+    if (!confirm("Apakah Anda yakin ingin menghapus catatan harian ini?")) return;
     try {
-      await deleteComment(collabId);
+      await deleteComment(collabId, noteId);
       // Reload current page, or go to previous page if current page becomes empty
       const remainingComments = comments.length - 1;
       const maxPage = Math.ceil(remainingComments / commentsPerPage) || 1;
@@ -958,8 +958,8 @@ function NoteDetail() {
                   <div className="space-y-4">
                     {comments.map((comment) => {
                       // Check permissions for each comment
-                      const canEditComment = comment.is_editable === true;
-                      const canDeleteComment = comment.is_deletable === true;
+                      const canEditComment = comment.is_maker === true;
+                      const canDeleteComment = comment.is_maker === true;
 
                       return (
                         <div key={comment.id} className="bg-gray-700 rounded-lg p-4">
@@ -1005,7 +1005,7 @@ function NoteDetail() {
                                 )}
                                 {canDeleteComment && (
                                   <button
-                                    onClick={() => handleDeleteComment(String(comment.id))}
+                                    onClick={() => handleDeleteComment(String(comment.id),comment.note_id)}
                                     className="text-gray-400 hover:text-red-400 p-1"
                                     title="Delete comment"
                                   >

@@ -32,8 +32,10 @@ interface DailyNote {
   note_collaboration_id: number;
   thumbnail: string;
   body: string;
-  is_editable: boolean;
-  is_deletable: boolean;
+  is_maker: boolean;
+  is_owner: boolean;
+  // is_editable: boolean;
+  // is_deletable: boolean;
 }
 
 interface Pagination {
@@ -57,7 +59,7 @@ interface CollaborationState {
   
   fetchCollaborations: (noteId: number, page?: number, limit?: number) => Promise<void>;
   addOrUpdateComment: (noteId: number, body: string, thumbnail?: string, collaborationId?: string) => Promise<Collaboration>;
-  deleteComment: (collaborationId: string) => Promise<void>;
+  deleteComment: (collaborationId: string, noteId: number) => Promise<void>;
 }
 
 export const useCollaborationStore = create<CollaborationState>((set, get) => ({
@@ -180,9 +182,9 @@ export const useCollaborationStore = create<CollaborationState>((set, get) => ({
       };
       
       if (collaborationId) {
-        response = await apiClientWithPagination(`/note_collaboration_dailies/${collaborationId}`, "PUT", payload);
+        response = await apiClientWithPagination(`/daily_notes/${collaborationId}`, "PUT", payload,{},noteId.toString());
       } else {
-        response = await apiClient("/note_collaboration_dailies", "POST", payload);
+        response = await apiClient("/daily_notes", "POST", payload,{},noteId.toString());
       }
 
       // Handle response berdasarkan struktur yang mungkin
@@ -232,10 +234,10 @@ export const useCollaborationStore = create<CollaborationState>((set, get) => ({
     }
   },
 
-  deleteComment: async (collaborationId: string) => {
+  deleteComment: async (collaborationId: string,noteId: number) => {
     set({ loading: true, error: null });
     try {
-      await apiClient(`/note_collaboration_dailies/${collaborationId}`, "DELETE");
+      await apiClient(`/daily_notes/${collaborationId}`, "DELETE",{},{},noteId.toString());
 
       // Hapus dari state
       set((state) => ({
