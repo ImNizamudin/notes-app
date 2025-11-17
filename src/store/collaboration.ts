@@ -130,7 +130,7 @@ export const useCollaborationStore = create<CollaborationState>((set, get) => ({
   fetchCollaborations: async (noteId: number, page: number = 1, limit: number = 10) => {
     set({ loading: true, error: null });
     try {
-      const response = await apiClientWithPagination(`/note_dailies?page=${page}&limit=${limit}`, "GET", undefined, {}, noteId.toString());
+      const response = await apiClientWithPagination(`/daily_notes?page=${page}&limit=${limit}`, "GET", undefined, {}, noteId.toString());
 
       // Pastikan struktur response sesuai
       let comments: DailyNote[] = [];

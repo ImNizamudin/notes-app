@@ -17,6 +17,7 @@ interface Props {
         is_deletable?: boolean;
         total_daily_notes: number;
         total_daily_notes_mine: number;
+        type: string;
     }
 }
 
@@ -24,6 +25,30 @@ function NoteCard({ note }: Props) {
     const deleteNote = useNotesStore((state) => state.deleteNote);
     const [isDeleting, setIsDeleting] = useState(false);
     
+    // Function to get border color based on note type
+    const getBorderColor = () => {
+        switch (note.type) {
+            case 'tracker':
+                return 'border-orange-500 hover:border-orange-400';
+            case 'daily_note':
+                return 'border-blue-500 hover:border-blue-400';
+            default:
+                return 'border-gray-700 hover:border-gray-600';
+        }
+    };
+
+    // Function to get type badge color
+    const getTypeBadgeColor = () => {
+        switch (note.type) {
+            case 'tracker':
+                return 'bg-orange-900/50 text-orange-300 border-orange-700';
+            case 'daily_note':
+                return 'bg-blue-900/50 text-blue-300 border-blue-700';
+            default:
+                return 'bg-gray-700 text-gray-300 border-gray-600';
+        }
+    };
+
     const handleDelete = async () => {
         if (!confirm("Hapus catatan ini?")) return;
         
@@ -72,7 +97,7 @@ function NoteCard({ note }: Props) {
     const [imgError, setImgError ] = useState(false);
 
     return (
-        <div className="group bg-gray-800 border border-gray-700 rounded-xl overflow-hidden hover:shadow-xl hover:shadow-gray-900/20 transition-all duration-300 hover:border-gray-600 flex flex-col h-full">
+        <div className={`group bg-gray-800 border rounded-xl overflow-hidden hover:shadow-xl hover:shadow-gray-900/20 transition-all duration-300 flex flex-col h-full ${getBorderColor()}`}>
             
             {/* User Profile Header */}
             <div className="p-4 border-b border-gray-700 flex-shrink-0">
@@ -83,10 +108,12 @@ function NoteCard({ note }: Props) {
                         </div>
                         
                         <div className="flex-1 min-w-0">
-                            <h3 className="text-gray-200 font-medium text-sm truncate w-20">
-                                {note.username}
-                            </h3>
-                            <div className="flex items-center space-x-2 text-xs text-gray-400">
+                            <div className="flex items-center space-x-2">
+                                <h3 className="text-gray-200 font-medium text-sm truncate w-20">
+                                    {note.username}
+                                </h3>
+                            </div>
+                            <div className="flex items-center space-x-2 text-xs text-gray-400 mt-1">
                                 <Clock className="w-3 h-3" />
                                 <span>{formatDate(note.updated_at || note.created_at) || 'No date'}</span>
                             </div>
@@ -189,7 +216,7 @@ function NoteCard({ note }: Props) {
             </div>
 
             {/* Footer Actions */}
-            <div className="p-4 border-t border-gray-700 bg-gray-800/50 flex-shrink-0"> {/* Tambahkan flex-shrink-0 */}
+            <div className="p-4 border-t border-gray-700 bg-gray-800/50 flex-shrink-0">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
                         <div className="flex items-center space-x-1 text-gray-400 bg-gray-700/50 px-1 py-1 rounded-lg border border-gray-600">

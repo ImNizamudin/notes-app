@@ -2,7 +2,12 @@ import { useEffect, useState, useRef } from "react";
 import { useNotesStore, type Note } from "../store/note";
 import { useCollaborationStore } from "../store/collaboration";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { Edit3, Trash2, ArrowLeft, Tag, FileText, Users, Lock, Globe, MessageCircle, Send, X, Type, ImageIcon, Eye, Plus, RefreshCw, Upload, AlertCircle, CheckCircle, ChevronLeft, ChevronRight, Clock, ImageOff } from "lucide-react";
+import { 
+  Edit3, Trash2, ArrowLeft, Tag, FileText, Users, Lock, Globe, 
+  MessageCircle, Send, X, Type, ImageIcon, Eye, Plus, RefreshCw, 
+  Upload, AlertCircle, CheckCircle, ChevronLeft, ChevronRight, 
+  Clock, ImageOff, Menu, EllipsisVertical, Trash, Copy, Check 
+} from "lucide-react";
 import DOMPurify from "dompurify";
 import hljs from "highlight.js";
 import "highlight.js/styles/github-dark.css";
@@ -121,6 +126,23 @@ function NoteDetail() {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadSuccess, setUploadSuccess] = useState<string | null>(null);
 
+  // burger action note
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Tambahkan state untuk status copy
+  const [copiedCodeId, setCopiedCodeId] = useState<string | null>(null);
+
+  // Fungsi untuk copy code
+  const handleCopyCode = async (code: string) => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopiedCodeId(code);
+      setTimeout(() => setCopiedCodeId(null), 2000);
+    } catch (err) {
+      console.error('Failed to copy code:', err);
+    }
+  };
+
   const loadData = async () => {
     try {
       setLoading(true);
@@ -132,7 +154,7 @@ function NoteDetail() {
       // Load comments with pagination
       await fetchCollaborations(parseInt(id), currentPage, commentsPerPage);
     } catch (error: any) {
-      setErr(error.message || "Failed to load note");
+      setErr(error.response.meta.message);
     } finally {
       setLoading(false);
     }
@@ -144,7 +166,7 @@ function NoteDetail() {
     try {
       await fetchCollaborations(parseInt(id), page, commentsPerPage);
     } catch (error: any) {
-      setErr(error.message || "Failed to load comments");
+      setErr(error.response.meta.message);
     }
   };
 
@@ -180,7 +202,7 @@ function NoteDetail() {
       setCurrentPage(1);
       await loadComments(1);
     } catch (error: any) {
-      setErr(error.message || "Failed to add comment");
+      setErr(error.response.meta.message);
     }
   };
 
@@ -223,7 +245,7 @@ function NoteDetail() {
       }
       await loadComments(targetPage);
     } catch (error: any) {
-      setErr(error.message || "Failed to delete comment");
+      setErr(error.response.meta.message);
     }
   };
 
@@ -553,7 +575,7 @@ function NoteDetail() {
                     </div>
                     
                     {/* Action Buttons - Conditional based on permissions */}
-                    {(canEditNote || canDeleteNote) && (
+                    {/* {(canEditNote || canDeleteNote) && (
                       <div className="flex items-center space-x-3">
                         {canEditNote && (
                           <Link
@@ -575,105 +597,198 @@ function NoteDetail() {
                           </button>
                         )}
                       </div>
+                    )}*/}
+
+                      {(canEditNote || canDeleteNote || note.type === "tracker") && (
+                      <div className="flex items-center space-x-3">
+                        {/* Tampilkan generate_code jika ada */}
+                        {note.generate_code && (
+                          <div className="flex items-center space-x-2">
+                            {copiedCodeId === note.generate_code && (
+                              <span className="text-xs text-green-400 animate-pulse">Copied!</span>
+                            )}
+                            <div className="flex items-center space-x-1 bg-gray-700 px-2 py-2 rounded-md border border-gray-600 justify-center">
+                              <span className="text-sm text-gray-300 font-mono">
+                                {note.generate_code}
+                              </span>
+                              <button
+                                onClick={() => handleCopyCode(note.generate_code!)}
+                                className="p-1 text-gray-400 bg-gray-700 hover:text-gray-200 hover:bg-gray-600 rounded transition-colors"
+                                title="Copy code"
+                              >
+                                {copiedCodeId === note.generate_code ? (
+                                  <Check className="w-3 h-3 text-green-400" />
+                                ) : (
+                                  <Copy className="w-3 h-3" />
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                        {/* Desktop View - All buttons visible */}
+                        <div className="hidden md:flex items-center space-x-3">
+                          {canEditNote && (
+                            <Link
+                              to={`/notes/${note.id}/edit`}
+                              className="flex items-center space-x-2 px-2 py-2 bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-lg hover:from-blue-700 hover:to-blue-600 transition-all duration-200 shadow-lg hover:shadow-blue-500/25"
+                            >
+                              <Edit3 className="w-3 h-3" />
+                              <span className="text-sm">Edit</span>
+                            </Link>
+                          )}
+                          {canDeleteNote && (
+                            <button
+                              onClick={onDelete}
+                              disabled={deleting}
+                              className="flex items-center space-x-2 px-2 py-2 bg-gradient-to-r from-red-600 to-red-500 text-white rounded-lg hover:from-red-700 hover:to-red-600 transition-all duration-200 shadow-lg hover:shadow-red-500/25 disabled:opacity-50"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                              <span className="text-sm">{deleting ? "Deleting..." : "Delete"}</span>
+                            </button>
+                          )}
+                          {note.type === "tracker" && (
+                            <button
+                              onClick={handleRedirectStudyTracker}
+                              className="flex items-center space-x-2 px-2 py-2 bg-gradient-to-r from-orange-600 to-orange-500 text-white rounded-lg hover:from-orange-500 hover:to-orange-400 transition-all duration-200 shadow-lg hover:shadow-orange-500/25"
+                            >
+                              <RefreshCw className="w-3 h-3" />
+                              <span className="text-sm">Study Tracker</span>
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Mobile View - Dropdown menu */}
+                        <div className="md:hidden relative">
+                          <button
+                            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                            className="flex items-center justify-center w-10 h-10 bg-gray-700 border border-gray-600 rounded-lg hover:bg-gray-600 transition-colors"
+                          >
+                            <span className="text-gray-300 text-4xl">⋯</span>
+                          </button>
+
+                          {/* Dropdown Menu */}
+                          {isMobileMenuOpen && (
+                            <div className="absolute right-0 top-12 w-48 bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-10 py-2">
+                              {note.type === "tracker" && (
+                                <button
+                                  onClick={() => {
+                                    handleRedirectStudyTracker();
+                                    setIsMobileMenuOpen(false);
+                                  }}
+                                  className="flex items-center space-x-3 px-4 py-2 text-gray-300 bg-gray-800 hover:bg-gray-700 transition-colors w-full text-left"
+                                >
+                                  <RefreshCw className="w-4 h-4" />
+                                  <span>Study Tracker</span>
+                                </button>
+                              )}
+                              {canEditNote && (
+                                <Link
+                                  to={`/notes/${note.id}/edit`}
+                                  className="flex items-center space-x-3 px-4 py-2 text-gray-300 hover:bg-gray-700 transition-colors"
+                                  onClick={() => setIsMobileMenuOpen(false)}
+                                >
+                                  <Edit3 className="w-4 h-4" />
+                                  <span>Edit Note</span>
+                                </Link>
+                              )}
+                              {canDeleteNote && (
+                                <button
+                                  onClick={() => {
+                                    onDelete();
+                                    setIsMobileMenuOpen(false);
+                                  }}
+                                  disabled={deleting}
+                                  className="flex items-center space-x-3 px-4 py-2 bg-gray-800 text-gray-300 hover:bg-gray-700 transition-colors w-full text-left disabled:opacity-50"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                  <span>{deleting ? "Deleting..." : "Delete Note"}</span>
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     )}
                   </div>
 
                   {/* Bagian 2: Title dan Tags */}
                   <div className="space-y-3">
-  {/* Title */}
-  <h1 className="text-3xl font-bold text-gray-100">{note.title}</h1>
-  
-  {/* Tags - Pindah ke bawah judul */}
-  {note.tags?.length ? (
-    <div className="flex flex-wrap gap-2">
-      {note.tags.map((tag, index) => (
-        <span
-          key={index}
-          className="inline-flex items-center space-x-1 bg-gray-700 text-gray-300 text-sm px-3 py-1 rounded-lg"
-        >
-          <Tag className="w-3 h-3" />
-          <span>{tag}</span>
-        </span>
-      ))}
-    </div>
-  ) : null}
+                    {/* Title */}
+                    <h1 className="text-3xl font-bold text-gray-100">{note.title}</h1>
+                    
+                    {/* Tags - Pindah ke bawah judul */}
+                    {note.tags?.length ? (
+                      <div className="flex flex-wrap gap-2">
+                        {note.tags.map((tag, index) => (
+                          <span
+                            key={index}
+                            className="inline-flex items-center space-x-1 bg-gray-700 text-gray-300 text-sm px-3 py-1 rounded-lg"
+                          >
+                            <Tag className="w-3 h-3" />
+                            <span>{tag}</span>
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
 
-  {/* Metadata Row - Type, Visibility, Study Tracker Button */}
-  <div className="flex flex-wrap items-center gap-3">
-    {/* Type Badge */}
-    <div className="flex items-center space-x-2">
-      <span className={`inline-flex items-center space-x-1 px-3 py-1 rounded-lg text-sm font-medium ${
-        note.type === 'tracker' 
-          ? 'bg-orange-900/50 text-orange-300 border border-orange-700' 
-          : 'bg-blue-900/50 text-blue-300 border border-blue-700'
-      }`}>
-        {note.type === 'tracker' ? (
-          <RefreshCw className="w-3 h-3" />
-        ) : (
-          <FileText className="w-3 h-3" />
-        )}
-        <span className="capitalize">{note.type?.replace('_', ' ')}</span>
-      </span>
-    </div>
+                    {/* Metadata Row - Type, Visibility, Study Tracker Button */}
+                    <div className="flex flex-wrap items-center gap-3">
+                      {/* Type Badge */}
+                      <div className="flex items-center space-x-2">
+                        <span className={`inline-flex items-center space-x-1 px-3 py-1 rounded-lg text-sm font-medium ${
+                          note.type === 'tracker' 
+                            ? 'bg-orange-900/50 text-orange-300 border border-orange-700' 
+                            : 'bg-blue-900/50 text-blue-300 border border-blue-700'
+                        }`}>
+                          {note.type === 'tracker' ? (
+                            <RefreshCw className="w-3 h-3" />
+                          ) : (
+                            <FileText className="w-3 h-3" />
+                          )}
+                          <span className="capitalize">{note.type?.replace('_', ' ')}</span>
+                        </span>
+                      </div>
 
-    {/* Visibility Badge */}
-    <div className="flex items-center space-x-2">
-      <span className={`inline-flex items-center space-x-1 px-3 py-1 rounded-lg text-sm font-medium ${
-        note.visibility === 'public' 
-          ? 'bg-green-900/50 text-green-300 border border-green-700' 
-          : note.visibility === 'private'
-          ? 'bg-purple-900/50 text-purple-300 border border-purple-700'
-          : 'bg-blue-900/50 text-blue-300 border border-blue-700'
-      }`}>
-        {note.visibility === 'public' ? (
-          <Globe className="w-3 h-3" />
-        ) : note.visibility === 'private' ? (
-          <Lock className="w-3 h-3" />
-        ) : (
-          <Users className="w-3 h-3" />
-        )}
-        <span className="capitalize">{note.visibility}</span>
-      </span>
-    </div>
+                      {/* Visibility Badge */}
+                      <div className="flex items-center space-x-2">
+                        <span className={`inline-flex items-center space-x-1 px-3 py-1 rounded-lg text-sm font-medium ${
+                          note.visibility === 'public' 
+                            ? 'bg-green-900/50 text-green-300 border border-green-700' 
+                            : note.visibility === 'private'
+                            ? 'bg-purple-900/50 text-purple-300 border border-purple-700'
+                            : 'bg-blue-900/50 text-blue-300 border border-blue-700'
+                        }`}>
+                          {note.visibility === 'public' ? (
+                            <Globe className="w-3 h-3" />
+                          ) : note.visibility === 'private' ? (
+                            <Lock className="w-3 h-3" />
+                          ) : (
+                            <Users className="w-3 h-3" />
+                          )}
+                          <span className="capitalize">{note.visibility}</span>
+                        </span>
+                      </div>
 
-    {/* Study Tracker Button - Hanya muncul jika type = tracker */}
-    {note.type === 'tracker' && (
-      // <Link
-      //   to="/study_trackers"
-      //   className="inline-flex items-center space-x-1 px-3 py-1 bg-indigo-900/50 text-indigo-300 border border-indigo-700 rounded-lg text-sm font-medium hover:bg-indigo-800/50 transition-colors"
-      // >
-      //   <RefreshCw className="w-3 h-3" />
-      //   <span>Study Tracker</span>
-      // </Link>
-      <button
-        onClick={handleRedirectStudyTracker}
-        className="inline-flex items-center space-x-1 px-3 py-1 bg-indigo-900/50 text-indigo-300 border border-indigo-700 rounded-lg text-sm font-medium hover:bg-indigo-800/50 transition-colors"
-      >
-        <RefreshCw className="w-3 h-3" />
-        <span>Study Tracker</span>
-      </button>
-    )}
-
-    {/* Collaborators Button (jika visibility collaboration) */}
-    {note.visibility === 'collaboration' && (
-      <button
-        onClick={() => {
-          // TODO: Implement modal untuk melihat/mengelola collaborators
-          console.log('Open collaborators modal');
-        }}
-        className="inline-flex items-center space-x-1 px-3 py-1 bg-indigo-900/50 text-indigo-300 border border-indigo-700 rounded-lg text-sm font-medium hover:bg-indigo-800/50 transition-colors"
-      >
-        <Users className="w-3 h-3" />
-        <span>Collaborators</span>
-        {note.user_collaborators && (
-          <span className="bg-indigo-600 text-white text-xs px-1.5 py-0.5 rounded-full">
-            {Array.isArray(note.user_collaborators) ? note.user_collaborators.length : 0}
-          </span>
-        )}
-      </button>
-    )}
-  </div>
-</div>
+                      {/* Collaborators Button (jika visibility collaboration) */}
+                      {note.visibility === 'collaboration' && (
+                        <button
+                          onClick={() => {
+                            // TODO: Implement modal untuk melihat/mengelola collaborators
+                            console.log('Open collaborators modal');
+                          }}
+                          className="inline-flex items-center space-x-1 px-3 py-1 bg-indigo-900/50 text-indigo-300 border border-indigo-700 rounded-lg text-sm font-medium hover:bg-indigo-800/50 transition-colors"
+                        >
+                          <Users className="w-3 h-3" />
+                          <span>Collaborators</span>
+                          {note.user_collaborators && (
+                            <span className="bg-indigo-600 text-white text-xs px-1.5 py-0.5 rounded-full">
+                              {Array.isArray(note.user_collaborators) ? note.user_collaborators.length : 0}
+                            </span>
+                          )}
+                        </button>
+                      )}
+                    </div>
+                  </div>
                   
                 </div>
               </div>
@@ -756,7 +871,7 @@ function NoteDetail() {
               <div className="p-6">
                 <div className="flex items-center space-x-2 mb-4">
                   <MessageCircle className="w-5 h-5 text-gray-400" />
-                  <h3 className="text-lg font-medium text-gray-300">Comments</h3>
+                  <h3 className="text-lg font-medium text-gray-300">Catatan Harian</h3>
                   <span className="bg-blue-600 text-white text-sm px-2 py-1 rounded-full">
                     {pagination?.total_data || comments.length}
                   </span>

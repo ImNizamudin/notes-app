@@ -102,6 +102,13 @@ function VisibilityModal({ isOpen, onClose, selectedType, onSelect }: Visibility
       color: "text-blue-400"
     },
     {
+      value: "collaboration" as const,
+      icon: User,
+      title: "Collaboration",
+      description: "Visible to you and collaborators",
+      color: "text-green-400"
+    },
+    {
       value: "private" as const,
       icon: Lock,
       title: "Private",
@@ -231,7 +238,7 @@ function AddNote() {
   const [body, setBody] = useState("");
   const [tagsInput, setTagsInput] = useState("");
   const [type, setType] = useState<"tracker" | "daily_note">("daily_note");
-  const [typeVisibility, setTypeVisibility] = useState<"private" | "collaboration" | "premium" | "public">("public");
+  const [typeVisibility, setTypeVisibility] = useState<"private" | "collaboration" | "premium" | "public">("collaboration");
   const [thumbnail, setThumbnail] = useState<string | null>(null);
   const [showMediaModal, setShowMediaModal] = useState(false);
   const [showTypeModal, setShowTypeModal] = useState(false);
@@ -366,7 +373,8 @@ function AddNote() {
 
       navigate("/");
     } catch (e: any) {
-      setErr(e.message || "Gagal menambahkan note");
+      setErr(e.response.meta.message);
+      console.log(e.response.meta.message)
     } finally {
       setLoading(false);
     }
@@ -495,6 +503,8 @@ function AddNote() {
                 >
                   {typeVisibility === "private" ? (
                     <Lock className="w-4 h-4 text-purple-400" />
+                  ) : typeVisibility === "collaboration" ? (
+                    <User className="w-4 h-4 text-green-400" />
                   ) : (
                     <Earth className="w-4 h-4 text-blue-400" />
                   )}

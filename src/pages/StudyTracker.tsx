@@ -192,7 +192,7 @@ function SessionModal({ isOpen, onClose, session, courseName, sessionNumber, onS
               />
               <div className="flex items-center space-x-2">
                 <MessageCircle className="w-5 h-5 text-blue-400" />
-                <span className="text-gray-300">Didiskusikan</span>
+                <span className="text-gray-300">Diskusi</span>
               </div>
             </label>
           </div>
@@ -578,6 +578,8 @@ export default function StudyTrackers() {
   const [showAddStudyModal, setShowAddStudyModal] = useState(false);
   const [showDeleteStudyModal, setShowDeleteStudyModal] = useState(false);
 
+  const [deletingCourseId, setDeletingCourseId] = useState<number | null>(null);
+
   const location = useLocation();
   const noteId = location.state?.noteId;
 
@@ -660,7 +662,7 @@ export default function StudyTrackers() {
       statuses.push({
         type: 'discussed',
         icon: <MessageCircle className="w-4 h-4 text-blue-400" />,
-        tooltip: 'Didiskusikan'
+        tooltip: 'Diskusi'
       });
     }
     
@@ -844,6 +846,34 @@ export default function StudyTrackers() {
     );
   }
 
+  const handleDeleteCourse = async (courseId: number) => {
+    if (!confirm("Are you sure you want to delete this course from your study tracker?")) {
+      return;
+    }
+
+    setDeletingCourseId(courseId);
+    try {
+      // TODO: Implement API call to delete course
+      // await apiClient(`/study_trackers/${noteId}/courses/${courseId}`, "DELETE");
+      
+      // Update local state
+      if (data) {
+        const updatedData = {
+          ...data,
+          body: data.body.filter(course => course.id !== courseId)
+        };
+        setData(updatedData);
+      }
+      
+      console.log('Deleted course:', courseId);
+    } catch (err: any) {
+      setError(err.response?.meta?.message || "Failed to delete course");
+      console.error('Error deleting course:', err);
+    } finally {
+      setDeletingCourseId(null);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-900">
       {/* Header */}
@@ -889,43 +919,51 @@ export default function StudyTrackers() {
             <Database className="w-5 h-5" />
             <span className="text-sm">Manage your study tracker</span>
           </div>
-          <div className="flex items-center space-x-3">
-            {/* Generate Study Tracker Button */}
-            <button
-              onClick={() => handleGenerateStudyTracker(noteId)}
-              className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-500 transition-colors"
-            >
-              <PlusCircle className="w-4 h-4" />
-              <span>Generate Study Tracker</span>
-            </button>
+          {data.status === "submitted" && (
+            <div className="px-3 py-1 bg-green-900/50 border border-green-700 text-green-300 text-sm rounded-lg">
+              Study Tracker Submitted
+            </div>
+          )}
+          {data.status !== "submitted" && (
+            <div className="flex items-center space-x-3">
+              {/* Generate Study Tracker Button */}
+              <button
+                onClick={() => handleGenerateStudyTracker(noteId)}
+                className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-500 transition-colors"
+              >
+                <PlusCircle className="w-4 h-4" />
+                <span>Generate Study Tracker</span>
+              </button>
 
-            {/* Add Study Button */}
-            <button
-              onClick={() => setShowAddStudyModal(true)}
-              className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-500 transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Add Study</span>
-            </button>
+              {/* Add Study Button */}
+              <button
+                onClick={() => setShowAddStudyModal(true)}
+                className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-500 transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add Study</span>
+              </button>
 
-            {/* Delete Study Button */}
-            <button
-              onClick={() => setShowDeleteStudyModal(true)}
-              className="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-500 transition-colors"
-            >
-              <Trash2 className="w-4 h-4" />
-              <span>Delete Study</span>
-            </button>
+              {/* Submit Study Button */}
+              <button
+                onClick={() => handleSubmitStudy(noteId)}
+                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition-colors"
+              >
+                <Send className="w-4 h-4" />
+                <span>Submit Study</span>
+              </button>
 
-            {/* Submit Study Button */}
-            <button
-              onClick={() => handleSubmitStudy(noteId)}
-              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition-colors"
-            >
-              <Send className="w-4 h-4" />
-              <span>Submit Study</span>
-            </button>
-          </div>
+              {/* Delete Study Button */}
+              {/* <button
+                onClick={() => setShowDeleteStudyModal(true)}
+                className="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-500 transition-colors"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Delete Study</span>
+              </button> */}
+            </div>
+          )}
+          
         </div>
 
         {/* Summary Stats */}
@@ -1010,152 +1048,169 @@ export default function StudyTrackers() {
                   <th className="text-center p-4 text-gray-300 font-medium bg-gray-750 w-[100px]">
                     Attendance
                   </th>
-                  {/* <th className="text-center p-4 text-gray-300 font-medium bg-gray-750">
-                    Avg Score
-                  </th> */}
                   <th className="text-center p-4 text-gray-300 font-medium bg-gray-750 w-[100px]">
                     Assignments
                   </th>
+                  {data.status !== "submitted" && (
+                    <th className="text-center p-4 text-gray-300 font-medium bg-gray-750 w-[100px]">
+                      Delete
+                    </th>
+                  )}
                 </tr>
               </thead>
               
-              <tbody>
-                {data.body.map((course, index) => {
-                  const stats = calculateCourseStats(course);
-                  
-                  return (
-                    <tr 
-                      key={course.id} 
-                      className={`border-b border-gray-700 bg-gray-800`}
-                    >
-                      {/* Course Name - Sticky */}
-                      <td className="p-4 text-gray-100 left-0 z-10 bg-inherit w-[150px] sticky">
-                        <div className="flex items-center space-x-3">
-                          <div className={`w-3 h-3 rounded-full ${
-                            course.is_practical ? 'bg-blue-500' : 'bg-green-500'
-                          }`}></div>
-                          <div>
-                            <div className="font-medium">{course.name}</div>
-                            <div className="text-sm text-gray-400 flex items-center space-x-2 mt-1">
-                              <span>{course.sks} SKS</span>
-                              <span>•</span>
-                              <span>{course.is_practical ? 'Praktikum' : 'Teori'}</span>
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-                      
-                      {/* Sessions Data */}
-                      {course.sessions.map((session) => {
-                        const sessionStatuses = getSessionStatus(session);
-                        const isEmpty = sessionStatuses.length === 0;
-                        
-                        return (
-                          <td 
-                            key={session.session_number} 
-                            className="text-center p-4"
-                          >
-                            <button
-                              onClick={() => handleSessionClick(course.id, course.name, session)}
-                              className={`w-full h-full flex items-center justify-center space-x-1 min-h-[60px] rounded-lg transition-colors ${
-                                isEmpty 
-                                  ? 'bg-gray-800 hover:bg-gray-600 border border-dashed border-gray-600' 
-                                  : 'cursor-help hover:bg-gray-700'
-                              }`}
-                              title={isEmpty ? 'Klik untuk menambahkan data' : sessionStatuses.map(s => s.tooltip).join(' • ')}
-                            >
-                              {isEmpty ? (
-                                <div className="flex flex-col items-center space-y-1">
-                                  {/* <Plus className="w-4 h-4 text-gray-400" />
-                                  <span className="text-xs text-gray-400">Add</span> */}
-                                </div>
-                              ) : (
-                                sessionStatuses.map((status, index) => (
-                                  <div key={index} className="flex items-center">
-                                    {status.icon || status.content}
-                                  </div>
-                                ))
-                              )}
-                            </button>
-                          </td>
-                        );
-                      })}
-                      
-                      {/* Assignments Data */}
-                      {course.assignments.map((assignment) => {
-                        const assignmentStatuses = getAssignmentStatus(assignment);
-                        const isEmpty = assignmentStatuses.length === 0;
-                        
-                        return (
-                          <td 
-                            key={assignment.assignment_number} 
-                            className="text-center p-4"
-                          >
-                            <button
-                              onClick={() => handleAssignmentClick(course.id, course.name, assignment)}
-                              className={`w-full h-full flex items-center justify-center space-x-1 min-h-[60px] rounded-lg transition-colors ${
-                                isEmpty 
-                                  ? 'bg-gray-800 hover:bg-gray-600 border border-dashed border-gray-600' 
-                                  : 'cursor-help hover:bg-gray-700'
-                              }`}
-                              title={isEmpty ? 'Klik untuk menambahkan data' : assignmentStatuses.map(s => s.tooltip).join(' • ')}
-                            >
-                              {isEmpty ? (
-                                <div className="flex flex-col items-center space-y-1">
-                                  {/* <Plus className="w-4 h-4 text-gray-400" />
-                                  <span className="text-xs text-gray-400">Add</span> */}
-                                </div>
-                              ) : (
-                                assignmentStatuses.map((status, index) => (
-                                  <div key={index} className="flex items-center">
-                                    {status.icon || status.content}
-                                  </div>
-                                ))
-                              )}
-                            </button>
-                          </td>
-                        );
-                      })}
-                      
-                      {/* Stats Columns */}
-                      <td className="text-center p-4">
-                        <div className="flex flex-col items-center">
-                          <span className="text-sm font-medium text-gray-100">
-                            {stats.attendance}/{stats.totalSessions}
-                          </span>
-                          <span className="text-xs text-gray-400">
-                            ({stats.attendancePercentage.toFixed(0)}%)
-                          </span>
-                        </div>
-                      </td>
-                      
-                      {/* <td className="text-center p-4">
-                        <div className="flex flex-col items-center">
-                          <span className="text-sm font-medium text-gray-100">
-                            {stats.averageSessionScore ? stats.averageSessionScore.toFixed(1) : '-'}
-                          </span>
-                          {stats.averageAssignmentScore && (
-                            <span className="text-xs text-gray-400">
-                              A: {stats.averageAssignmentScore.toFixed(1)}
-                            </span>
-                          )}
-                        </div>
-                      </td> */}
-                      
-                      <td className="text-center p-4">
-                        <div className="flex flex-col items-center">
-                          <span className="text-sm font-medium text-gray-100">
-                            {stats.submittedAssignments}/{stats.totalAssignments}
-                          </span>
-                          <span className="text-xs text-gray-400">
-                            ({stats.totalAssignments > 0 ? ((stats.submittedAssignments / stats.totalAssignments) * 100).toFixed(0) : 0}%)
-                          </span>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
+<tbody>
+  {data.body.map((course, index) => {
+    const stats = calculateCourseStats(course);
+    
+    return (
+      <tr 
+        key={course.id} 
+        className={`border-b border-gray-700 bg-gray-800`}
+      >
+        {/* Course Name - Sticky */}
+        <td className="p-4 text-gray-100 left-0 z-10 bg-inherit w-[200px] sticky">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3 flex-1">
+              <div className={`w-3 h-3 rounded-full ${
+                course.is_practical ? 'bg-blue-500' : 'bg-green-500'
+              }`}></div>
+              <div className="flex-1">
+                <div className="font-medium">{course.name}</div>
+                <div className="text-sm text-gray-400 flex items-center space-x-2 mt-1">
+                  <span>{course.sks} SKS</span>
+                  <span>•</span>
+                  <span>{course.is_practical ? 'Praktikum' : 'Teori'}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </td>
+        
+        {/* Sessions Data - TIDAK disabled meskipun status submitted */}
+        {course.sessions.map((session) => {
+          const sessionStatuses = getSessionStatus(session);
+          const isEmpty = sessionStatuses.length === 0;
+          
+          return (
+            <td 
+              key={session.session_number} 
+              className="text-center p-4"
+            >
+              <button
+                onClick={() => handleSessionClick(course.id, course.name, session)}
+                className={`w-full h-full flex items-center justify-center space-x-1 min-h-[60px] rounded-lg transition-colors ${
+                  isEmpty 
+                    ? 'bg-gray-800 hover:bg-gray-600 border border-dashed border-gray-600' 
+                    : 'cursor-help hover:bg-gray-700'
+                }`}
+                title={
+                  isEmpty 
+                    ? 'Klik untuk menambahkan data' 
+                    : sessionStatuses.map(s => s.tooltip).join(' • ')
+                }
+              >
+                {isEmpty ? (
+                  <div className="flex flex-col items-center space-y-1">
+                    {/* <Plus className="w-4 h-4 text-gray-400" />
+                    <span className="text-xs text-gray-400">Add</span> */}
+                  </div>
+                ) : (
+                  sessionStatuses.map((status, index) => (
+                    <div key={index} className="flex items-center">
+                      {status.icon || status.content}
+                    </div>
+                  ))
+                )}
+              </button>
+            </td>
+          );
+        })}
+        
+        {/* Assignments Data - TIDAK disabled meskipun status submitted */}
+        {course.assignments.map((assignment) => {
+          const assignmentStatuses = getAssignmentStatus(assignment);
+          const isEmpty = assignmentStatuses.length === 0;
+          
+          return (
+            <td 
+              key={assignment.assignment_number} 
+              className="text-center p-4"
+            >
+              <button
+                onClick={() => handleAssignmentClick(course.id, course.name, assignment)}
+                className={`w-full h-full flex items-center justify-center space-x-1 min-h-[60px] rounded-lg transition-colors ${
+                  isEmpty 
+                    ? 'bg-gray-800 hover:bg-gray-600 border border-dashed border-gray-600' 
+                    : 'cursor-help hover:bg-gray-700'
+                }`}
+                title={
+                  isEmpty 
+                    ? 'Klik untuk menambahkan data' 
+                    : assignmentStatuses.map(s => s.tooltip).join(' • ')
+                }
+              >
+                {isEmpty ? (
+                  <div className="flex flex-col items-center space-y-1">
+                    {/* <Plus className="w-4 h-4 text-gray-400" />
+                    <span className="text-xs text-gray-400">Add</span> */}
+                  </div>
+                ) : (
+                  assignmentStatuses.map((status, index) => (
+                    <div key={index} className="flex items-center">
+                      {status.icon || status.content}
+                    </div>
+                  ))
+                )}
+              </button>
+            </td>
+          );
+        })}
+        
+        {/* Stats Columns */}
+        <td className="text-center p-4">
+          <div className="flex flex-col items-center">
+            <span className="text-sm font-medium text-gray-100">
+              {stats.attendance}/{stats.totalSessions}
+            </span>
+            <span className="text-xs text-gray-400">
+              ({stats.attendancePercentage.toFixed(0)}%)
+            </span>
+          </div>
+        </td>
+        
+        <td className="text-center p-4">
+          <div className="flex flex-col items-center">
+            <span className="text-sm font-medium text-gray-100">
+              {stats.submittedAssignments}/{stats.totalAssignments}
+            </span>
+            <span className="text-xs text-gray-400">
+              ({stats.totalAssignments > 0 ? ((stats.submittedAssignments / stats.totalAssignments) * 100).toFixed(0) : 0}%)
+            </span>
+          </div>
+        </td>
+
+        {/* Delete Button - hanya muncul jika status bukan submitted */}
+        {data.status !== "submitted" && (
+          <td className="text-center p-4">
+            <button
+              onClick={() => handleDeleteCourse(course.id)}
+              disabled={deletingCourseId === course.id}
+              className="ml-3 p-2 text-red-400 hover:text-red-300 hover:bg-red-900/50 rounded-lg transition-colors disabled:opacity-50"
+              title="Delete course"
+            >
+              {deletingCourseId === course.id ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-400"></div>
+              ) : (
+                <Trash2 className="w-4 h-4" />
+              )}
+            </button>
+          </td>
+        )}
+      </tr>
+    );
+  })}
+</tbody>
             </table>
           </div>
         </div>
@@ -1170,7 +1225,7 @@ export default function StudyTrackers() {
             </div>
             <div className="flex items-center space-x-2">
               <MessageCircle className="w-4 h-4 text-blue-400" />
-              <span className="text-gray-400">Didiskusikan</span>
+              <span className="text-gray-400">Diskusi</span>
             </div>
             <div className="flex items-center space-x-2">
               <span className="text-sm font-medium text-yellow-400">88</span>
