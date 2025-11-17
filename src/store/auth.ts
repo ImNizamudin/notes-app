@@ -298,8 +298,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         password,
       });
 
-      console.log("Login API response:", data);
-
       // PERBAIKAN: handle berbagai format response
       const accessToken = data?.access_token ?? data?.accessToken ?? data?.data?.access_token ?? null;
       const refreshToken = data?.refresh_token ?? data?.refreshToken ?? data?.data?.refresh_token ?? null;

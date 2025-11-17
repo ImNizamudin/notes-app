@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, BookOpen, Calendar, Clock, CheckCircle, XCircle, FileText, Users, TrendingUp, Download, MessageCircle, Plus, Trash2, PlusCircle, Send, Database } from "lucide-react";
+import { ArrowLeft, BookOpen, Calendar, Clock, CheckCircle, FileText, TrendingUp, Download, MessageCircle, Plus, Trash2, PlusCircle, Send, Database, X } from "lucide-react";
 import { apiClient } from "../api/client";
 import { useLocation } from 'react-router-dom';
 
@@ -124,8 +124,6 @@ function SessionModal({ isOpen, onClose, session, courseName, sessionNumber, onS
         {},
         noteId
       );
-
-      console.log('API Response:', response);
 
       // Update local state
       const sessionData: Partial<Session> = {
@@ -396,88 +394,362 @@ function AssignmentModal({ isOpen, onClose, assignment, courseName, assignmentNu
   );
 }
 
+interface Study {
+  id: number;
+  name: string;
+  sks: number;
+  semester: number;
+  is_practical: boolean;
+  study_field_id: number;
+  created_at: string;
+  updated_at: string;
+}
+
+interface StudiesResponse {
+  data: {
+    studies: Study[];
+  };
+  page: {
+    current_page: number;
+    total_data: number;
+    limit: number;
+    total_page: number;
+  };
+  meta: {
+    message: string;
+    code: number;
+  };
+}
+
 interface AddStudyModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAdd: (studyId: number) => void;
+  noteId: string;
 }
 
-function AddStudyModal({ isOpen, onClose, onAdd }: AddStudyModalProps) {
-  const [selectedStudy, setSelectedStudy] = useState<number>(0);
-  const [studies, setStudies] = useState<any[]>([]);
+function AddStudyModal({ isOpen, onClose, noteId }: AddStudyModalProps) {
+  const [selectedStudies, setSelectedStudies] = useState<number[]>([]);
+  const [studies, setStudies] = useState<Study[]>([]);
   const [loading, setLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
-  // Mock data for studies - replace with actual API call
-  const mockStudies = [
-    { id: 1, name: "Pendidikan Agama Islam", code: "PAI001" },
-    { id: 2, name: "Matematika Dasar", code: "MAT001" },
-    { id: 3, name: "Algoritma dan Pemrograman", code: "ALG001" },
-    { id: 4, name: "Sistem Basis Data", code: "SBD001" },
-    { id: 5, name: "Pemrograman Web", code: "WEB001" },
-  ];
+  // Fetch studies dengan search dan pagination
+  const fetchStudies = async (search: string = "", page: number = 1) => {
+    setSearchLoading(true);
+    try {
+      const params = new URLSearchParams({
+        limit: "10",
+        page: page.toString(),
+        ...(search && { search })
+      });
 
-  useEffect(() => {
-    // TODO: Replace with actual API call to fetch available studies
-    setStudies(mockStudies);
-  }, []);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (selectedStudy) {
-      onAdd(selectedStudy);
-      onClose();
-      setSelectedStudy(0);
+      const response: StudiesResponse = await apiClient(`/studies?${params}`, "GET");
+      console.log(response)
+      setStudies(response.studies || []);
+      setTotalPages(response.page.total_page);
+      setCurrentPage(response.page.current_page);
+    } catch (error: any) {
+      console.error("Error fetching studies:", error);
+    } finally {
+      setSearchLoading(false);
     }
+  };
+
+  // Debounce search
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (isOpen) {
+        setCurrentPage(1);
+        fetchStudies(searchTerm, 1);
+      }
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchTerm, isOpen]);
+
+  // Load studies pertama kali modal dibuka
+  useEffect(() => {
+    if (isOpen) {
+      fetchStudies();
+      setSelectedStudies([]);
+      setSearchTerm("");
+      setCurrentPage(1);
+    }
+  }, [isOpen]);
+
+  // Load more studies
+  const loadMoreStudies = async () => {
+    if (currentPage >= totalPages || searchLoading) return;
+    
+    const nextPage = currentPage + 1;
+    setSearchLoading(true);
+    try {
+      const params = new URLSearchParams({
+        limit: "10",
+        page: nextPage.toString(),
+        ...(searchTerm && { search: searchTerm })
+      });
+
+      const response: StudiesResponse = await apiClient(`/studies?${params}`, "GET");
+      setStudies(prev => [...prev, ...(response.data.studies || [])]);
+      setTotalPages(response.page.total_page);
+      setCurrentPage(response.page.current_page);
+    } catch (error: any) {
+      console.error("Error loading more studies:", error);
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
+  const handleStudyToggle = (studyId: number) => {
+    setSelectedStudies(prev => {
+      if (prev.includes(studyId)) {
+        return prev.filter(id => id !== studyId);
+      } else {
+        if (prev.length >= 5) {
+          alert("You can only select up to 5 studies");
+          return prev;
+        }
+        return [...prev, studyId];
+      }
+    });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (selectedStudies.length === 0) {
+      alert("Please select at least one study");
+      return;
+    }
+
+    setAdding(true);
+    try {
+      await apiClient(
+        "/study_trackers/many",
+        "POST",
+        {
+          study_ids: selectedStudies
+        },
+        {},
+        noteId
+      );
+
+      onClose();
+      setSelectedStudies([]);
+    } catch (error: any) {
+      console.error("Error adding studies:", error);
+      alert(error.response?.meta?.message || "Failed to add studies");
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  const getSelectedStudyNames = () => {
+    return selectedStudies.map(id => {
+      const study = studies.find(s => s.id === id);
+      return study ? `${study.name} (${study.sks} SKS)` : "";
+    }).filter(Boolean);
+  };
+
+  // Generate kode matkul sederhana berdasarkan nama
+  const generateStudyCode = (study: Study) => {
+    const words = study.name.split(' ');
+    if (words.length >= 2) {
+      return words.map(word => word.charAt(0).toUpperCase()).join('').substring(0, 3);
+    }
+    return study.name.substring(0, 3).toUpperCase();
   };
 
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
-      <div className="bg-gray-800 rounded-xl w-full max-w-md">
+      <div className="bg-gray-800 rounded-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
         <div className="p-6 border-b border-gray-700">
-          <h2 className="text-xl font-bold text-gray-100">Add Study</h2>
-          <p className="text-gray-400 text-sm mt-1">Select a study to add to your tracker</p>
+          <h2 className="text-xl font-bold text-gray-100">Add Studies</h2>
+          <p className="text-gray-400 text-sm mt-1">
+            Select up to 5 studies to add to your tracker
+          </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6">
-          {/* Study Selection */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Select Study
-            </label>
-            <select
-              value={selectedStudy}
-              onChange={(e) => setSelectedStudy(Number(e.target.value))}
-              className="w-full bg-gray-700 border border-gray-600 text-gray-100 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              required
-            >
-              <option value={0}>Choose a study...</option>
-              {studies.map((study) => (
-                <option key={study.id} value={study.id}>
-                  {study.code} - {study.name}
-                </option>
-              ))}
-            </select>
+        <div className="flex-1 overflow-hidden flex flex-col">
+          {/* Search Bar */}
+          <div className="p-6 border-b border-gray-700">
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Search studies by name..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full bg-gray-700 border border-gray-600 text-gray-100 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-400"
+              />
+              {searchLoading && (
+                <div className="absolute right-3 top-3">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500"></div>
+                </div>
+              )}
+            </div>
           </div>
 
+          {/* Selected Studies Preview */}
+          {selectedStudies.length > 0 && (
+            <div className="p-4 border-b border-gray-700 bg-gray-750">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-gray-300">
+                  Selected ({selectedStudies.length}/5)
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setSelectedStudies([])}
+                  className="text-xs text-red-400 hover:text-red-300"
+                >
+                  Clear all
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {getSelectedStudyNames().map((name, index) => (
+                  <span
+                    key={index}
+                    className="inline-flex items-center space-x-1 bg-blue-600/20 text-blue-300 text-xs px-2 py-1 rounded border border-blue-500/30"
+                  >
+                    <span>{name}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleStudyToggle(selectedStudies[index])}
+                      className="text-blue-400 hover:text-blue-300 ml-1"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Studies List */}
+          <div className="flex-1 overflow-y-auto">
+            {loading ? (
+              <div className="flex justify-center items-center h-32">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+              </div>
+            ) : studies.length === 0 ? (
+              <div className="text-center py-12 text-gray-400">
+                <BookOpen className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <p>No studies found</p>
+                <p className="text-sm mt-1">
+                  {searchTerm ? "Try a different search term" : "No studies available"}
+                </p>
+              </div>
+            ) : (
+              <div className="p-4 space-y-2">
+                {studies.map((study) => (
+                  <label
+                    key={study.id}
+                    className={`flex items-center space-x-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                      selectedStudies.includes(study.id)
+                        ? "border-blue-500 bg-blue-500/10"
+                        : "border-gray-600 bg-gray-700 hover:border-gray-500"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedStudies.includes(study.id)}
+                      onChange={() => handleStudyToggle(study.id)}
+                      className="w-4 h-4 text-blue-600 bg-gray-800 border-gray-600 rounded focus:ring-blue-500 focus:ring-2"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center space-x-2 mb-1">
+                            <span className="font-medium text-gray-100 truncate">
+                              {study.name}
+                            </span>
+                            <span className="text-xs bg-gray-600 text-gray-300 px-2 py-1 rounded">
+                              {generateStudyCode(study)}
+                            </span>
+                          </div>
+                          <div className="text-sm text-gray-400 flex items-center space-x-3">
+                            <span>{study.sks} SKS</span>
+                            <span>•</span>
+                            <span>Semester {study.semester}</span>
+                            <span>•</span>
+                            <span>{study.is_practical ? "Praktikum" : "Teori"}</span>
+                          </div>
+                        </div>
+                        <div className={`w-3 h-3 rounded-full flex-shrink-0 ${
+                          study.is_practical ? 'bg-blue-500' : 'bg-green-500'
+                        }`} />
+                      </div>
+                    </div>
+                  </label>
+                ))}
+                
+                {/* Load More Button */}
+                {currentPage < totalPages && (
+                  <div className="flex justify-center pt-4">
+                    <button
+                      onClick={loadMoreStudies}
+                      disabled={searchLoading}
+                      className="px-4 py-2 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 disabled:opacity-50 transition-colors flex items-center space-x-2"
+                    >
+                      {searchLoading ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-300"></div>
+                          <span>Loading...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>Load More</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="p-6 border-t border-gray-700 flex justify-between items-center">
+          <div className="text-sm text-gray-400">
+            {selectedStudies.length > 0 && (
+              <span>
+                {selectedStudies.length} study{selectedStudies.length !== 1 ? 'ies' : ''} selected
+              </span>
+            )}
+          </div>
           <div className="flex space-x-3">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-3 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 transition-colors"
+              className="px-6 py-3 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 transition-colors"
             >
               Cancel
             </button>
             <button
-              type="submit"
-              disabled={!selectedStudy}
-              className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              onClick={handleSubmit}
+              disabled={selectedStudies.length === 0 || adding}
+              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center space-x-2"
             >
-              Add Study
+              {adding ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <span>Adding...</span>
+                </>
+              ) : (
+                <>
+                  <Plus className="w-4 h-4" />
+                  <span>Add Studies</span>
+                </>
+              )}
             </button>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   );
@@ -491,7 +763,7 @@ interface DeleteStudyModalProps {
   studies: StudyTrackerBody[];
 }
 
-function DeleteStudyModal({ isOpen, onClose, onDelete, studies }: DeleteStudyModalProps) {
+function DeleteStudyModal({ isOpen, onClose, studies }: DeleteStudyModalProps) {
   const [selectedStudy, setSelectedStudy] = useState<number>(0);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -607,25 +879,10 @@ export default function StudyTrackers() {
   const handleGenerateStudyTracker = async (noteId: string) => {
     try {
       const response: StudyTrackerResponse = await apiClient("/study_trackers", "POST", undefined, {}, noteId.toString());
-      console.log('Generate Study Tracker clicked');
-      console.log(response);
-      alert('Generate Study Tracker functionality to be implemented');
     } catch (err) {
-      setError(err.response?.meta?.message || "Failed to load study tracker data");
+      setError(err.response?.meta?.message);
       console.log(err)
     }
-  };
-
-  const handleAddStudy = (studyId: number) => {
-    // TODO: Implement add study functionality
-    console.log('Add study:', studyId);
-    alert(`Study ${studyId} added successfully!`);
-  };
-
-  const handleDeleteStudy = (studyId: number) => {
-    // TODO: Implement delete study functionality
-    console.log('Delete study:', studyId);
-    alert(`Study ${studyId} deleted successfully!`);
   };
 
   const handleSubmitStudy = async (noteId: string) => {
@@ -853,10 +1110,8 @@ export default function StudyTrackers() {
 
     setDeletingCourseId(courseId);
     try {
-      // TODO: Implement API call to delete course
-      // await apiClient(`/study_trackers/${noteId}/courses/${courseId}`, "DELETE");
+      await apiClient(`/study_trackers/${courseId}`, "DELETE", undefined, {}, noteId.toString());
       
-      // Update local state
       if (data) {
         const updatedData = {
           ...data,
@@ -1059,158 +1314,158 @@ export default function StudyTrackers() {
                 </tr>
               </thead>
               
-<tbody>
-  {data.body.map((course, index) => {
-    const stats = calculateCourseStats(course);
-    
-    return (
-      <tr 
-        key={course.id} 
-        className={`border-b border-gray-700 bg-gray-800`}
-      >
-        {/* Course Name - Sticky */}
-        <td className="p-4 text-gray-100 left-0 z-10 bg-inherit w-[200px] sticky">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3 flex-1">
-              <div className={`w-3 h-3 rounded-full ${
-                course.is_practical ? 'bg-blue-500' : 'bg-green-500'
-              }`}></div>
-              <div className="flex-1">
-                <div className="font-medium">{course.name}</div>
-                <div className="text-sm text-gray-400 flex items-center space-x-2 mt-1">
-                  <span>{course.sks} SKS</span>
-                  <span>•</span>
-                  <span>{course.is_practical ? 'Praktikum' : 'Teori'}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </td>
-        
-        {/* Sessions Data - TIDAK disabled meskipun status submitted */}
-        {course.sessions.map((session) => {
-          const sessionStatuses = getSessionStatus(session);
-          const isEmpty = sessionStatuses.length === 0;
-          
-          return (
-            <td 
-              key={session.session_number} 
-              className="text-center p-4"
-            >
-              <button
-                onClick={() => handleSessionClick(course.id, course.name, session)}
-                className={`w-full h-full flex items-center justify-center space-x-1 min-h-[60px] rounded-lg transition-colors ${
-                  isEmpty 
-                    ? 'bg-gray-800 hover:bg-gray-600 border border-dashed border-gray-600' 
-                    : 'cursor-help hover:bg-gray-700'
-                }`}
-                title={
-                  isEmpty 
-                    ? 'Klik untuk menambahkan data' 
-                    : sessionStatuses.map(s => s.tooltip).join(' • ')
-                }
-              >
-                {isEmpty ? (
-                  <div className="flex flex-col items-center space-y-1">
-                    {/* <Plus className="w-4 h-4 text-gray-400" />
-                    <span className="text-xs text-gray-400">Add</span> */}
-                  </div>
-                ) : (
-                  sessionStatuses.map((status, index) => (
-                    <div key={index} className="flex items-center">
-                      {status.icon || status.content}
-                    </div>
-                  ))
-                )}
-              </button>
-            </td>
-          );
-        })}
-        
-        {/* Assignments Data - TIDAK disabled meskipun status submitted */}
-        {course.assignments.map((assignment) => {
-          const assignmentStatuses = getAssignmentStatus(assignment);
-          const isEmpty = assignmentStatuses.length === 0;
-          
-          return (
-            <td 
-              key={assignment.assignment_number} 
-              className="text-center p-4"
-            >
-              <button
-                onClick={() => handleAssignmentClick(course.id, course.name, assignment)}
-                className={`w-full h-full flex items-center justify-center space-x-1 min-h-[60px] rounded-lg transition-colors ${
-                  isEmpty 
-                    ? 'bg-gray-800 hover:bg-gray-600 border border-dashed border-gray-600' 
-                    : 'cursor-help hover:bg-gray-700'
-                }`}
-                title={
-                  isEmpty 
-                    ? 'Klik untuk menambahkan data' 
-                    : assignmentStatuses.map(s => s.tooltip).join(' • ')
-                }
-              >
-                {isEmpty ? (
-                  <div className="flex flex-col items-center space-y-1">
-                    {/* <Plus className="w-4 h-4 text-gray-400" />
-                    <span className="text-xs text-gray-400">Add</span> */}
-                  </div>
-                ) : (
-                  assignmentStatuses.map((status, index) => (
-                    <div key={index} className="flex items-center">
-                      {status.icon || status.content}
-                    </div>
-                  ))
-                )}
-              </button>
-            </td>
-          );
-        })}
-        
-        {/* Stats Columns */}
-        <td className="text-center p-4">
-          <div className="flex flex-col items-center">
-            <span className="text-sm font-medium text-gray-100">
-              {stats.attendance}/{stats.totalSessions}
-            </span>
-            <span className="text-xs text-gray-400">
-              ({stats.attendancePercentage.toFixed(0)}%)
-            </span>
-          </div>
-        </td>
-        
-        <td className="text-center p-4">
-          <div className="flex flex-col items-center">
-            <span className="text-sm font-medium text-gray-100">
-              {stats.submittedAssignments}/{stats.totalAssignments}
-            </span>
-            <span className="text-xs text-gray-400">
-              ({stats.totalAssignments > 0 ? ((stats.submittedAssignments / stats.totalAssignments) * 100).toFixed(0) : 0}%)
-            </span>
-          </div>
-        </td>
+              <tbody>
+                {data.body.map((course, index) => {
+                  const stats = calculateCourseStats(course);
+                  
+                  return (
+                    <tr 
+                      key={course.id} 
+                      className={`border-b border-gray-700 bg-gray-800`}
+                    >
+                      {/* Course Name - Sticky */}
+                      <td className="p-4 text-gray-100 left-0 z-10 bg-inherit w-[200px] sticky">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3 flex-1">
+                            <div className={`w-3 h-3 rounded-full ${
+                              course.is_practical ? 'bg-blue-500' : 'bg-green-500'
+                            }`}></div>
+                            <div className="flex-1">
+                              <div className="font-medium">{course.name}</div>
+                              <div className="text-sm text-gray-400 flex items-center space-x-2 mt-1">
+                                <span>{course.sks} SKS</span>
+                                <span>•</span>
+                                <span>{course.is_practical ? 'Praktikum' : 'Teori'}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      
+                      {/* Sessions Data - TIDAK disabled meskipun status submitted */}
+                      {course.sessions.map((session) => {
+                        const sessionStatuses = getSessionStatus(session);
+                        const isEmpty = sessionStatuses.length === 0;
+                        
+                        return (
+                          <td 
+                            key={session.session_number} 
+                            className="text-center p-4"
+                          >
+                            <button
+                              onClick={() => handleSessionClick(course.id, course.name, session)}
+                              className={`w-full h-full flex items-center justify-center space-x-1 min-h-[60px] rounded-lg transition-colors ${
+                                isEmpty 
+                                  ? 'bg-gray-800 hover:bg-gray-600 border border-dashed border-gray-600' 
+                                  : 'cursor-help hover:bg-gray-700'
+                              }`}
+                              title={
+                                isEmpty 
+                                  ? 'Klik untuk menambahkan data' 
+                                  : sessionStatuses.map(s => s.tooltip).join(' • ')
+                              }
+                            >
+                              {isEmpty ? (
+                                <div className="flex flex-col items-center space-y-1">
+                                  {/* <Plus className="w-4 h-4 text-gray-400" />
+                                  <span className="text-xs text-gray-400">Add</span> */}
+                                </div>
+                              ) : (
+                                sessionStatuses.map((status, index) => (
+                                  <div key={index} className="flex items-center">
+                                    {status.icon || status.content}
+                                  </div>
+                                ))
+                              )}
+                            </button>
+                          </td>
+                        );
+                      })}
+                      
+                      {/* Assignments Data - TIDAK disabled meskipun status submitted */}
+                      {course.assignments.map((assignment) => {
+                        const assignmentStatuses = getAssignmentStatus(assignment);
+                        const isEmpty = assignmentStatuses.length === 0;
+                        
+                        return (
+                          <td 
+                            key={assignment.assignment_number} 
+                            className="text-center p-4"
+                          >
+                            <button
+                              onClick={() => handleAssignmentClick(course.id, course.name, assignment)}
+                              className={`w-full h-full flex items-center justify-center space-x-1 min-h-[60px] rounded-lg transition-colors ${
+                                isEmpty 
+                                  ? 'bg-gray-800 hover:bg-gray-600 border border-dashed border-gray-600' 
+                                  : 'cursor-help hover:bg-gray-700'
+                              }`}
+                              title={
+                                isEmpty 
+                                  ? 'Klik untuk menambahkan data' 
+                                  : assignmentStatuses.map(s => s.tooltip).join(' • ')
+                              }
+                            >
+                              {isEmpty ? (
+                                <div className="flex flex-col items-center space-y-1">
+                                  {/* <Plus className="w-4 h-4 text-gray-400" />
+                                  <span className="text-xs text-gray-400">Add</span> */}
+                                </div>
+                              ) : (
+                                assignmentStatuses.map((status, index) => (
+                                  <div key={index} className="flex items-center">
+                                    {status.icon || status.content}
+                                  </div>
+                                ))
+                              )}
+                            </button>
+                          </td>
+                        );
+                      })}
+                      
+                      {/* Stats Columns */}
+                      <td className="text-center p-4">
+                        <div className="flex flex-col items-center">
+                          <span className="text-sm font-medium text-gray-100">
+                            {stats.attendance}/{stats.totalSessions}
+                          </span>
+                          <span className="text-xs text-gray-400">
+                            ({stats.attendancePercentage.toFixed(0)}%)
+                          </span>
+                        </div>
+                      </td>
+                      
+                      <td className="text-center p-4">
+                        <div className="flex flex-col items-center">
+                          <span className="text-sm font-medium text-gray-100">
+                            {stats.submittedAssignments}/{stats.totalAssignments}
+                          </span>
+                          <span className="text-xs text-gray-400">
+                            ({stats.totalAssignments > 0 ? ((stats.submittedAssignments / stats.totalAssignments) * 100).toFixed(0) : 0}%)
+                          </span>
+                        </div>
+                      </td>
 
-        {/* Delete Button - hanya muncul jika status bukan submitted */}
-        {data.status !== "submitted" && (
-          <td className="text-center p-4">
-            <button
-              onClick={() => handleDeleteCourse(course.id)}
-              disabled={deletingCourseId === course.id}
-              className="ml-3 p-2 text-red-400 hover:text-red-300 hover:bg-red-900/50 rounded-lg transition-colors disabled:opacity-50"
-              title="Delete course"
-            >
-              {deletingCourseId === course.id ? (
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-400"></div>
-              ) : (
-                <Trash2 className="w-4 h-4" />
-              )}
-            </button>
-          </td>
-        )}
-      </tr>
-    );
-  })}
-</tbody>
+                      {/* Delete Button - hanya muncul jika status bukan submitted */}
+                      {data.status !== "submitted" && (
+                        <td className="text-center p-4">
+                          <button
+                            onClick={() => handleDeleteCourse(course.id)}
+                            disabled={deletingCourseId === course.id}
+                            className="ml-3 p-2 text-red-400 hover:text-red-300 hover:bg-red-900/50 rounded-lg transition-colors disabled:opacity-50"
+                            title="Delete course"
+                          >
+                            {deletingCourseId === course.id ? (
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-400"></div>
+                            ) : (
+                              <Trash2 className="w-4 h-4" />
+                            )}
+                          </button>
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })}
+              </tbody>
             </table>
           </div>
         </div>
@@ -1281,18 +1536,15 @@ export default function StudyTrackers() {
         studyTrackerId={selectedAssignment?.courseId || 0}
       />
 
-      {/* Add Study Modal */}
       <AddStudyModal
         isOpen={showAddStudyModal}
         onClose={() => setShowAddStudyModal(false)}
-        onAdd={handleAddStudy}
+        noteId={noteId}
       />
 
-      {/* Delete Study Modal */}
       <DeleteStudyModal
         isOpen={showDeleteStudyModal}
         onClose={() => setShowDeleteStudyModal(false)}
-        onDelete={handleDeleteStudy}
         studies={data?.body || []}
       />
     </div>

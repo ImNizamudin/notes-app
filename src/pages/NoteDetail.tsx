@@ -559,7 +559,7 @@ function NoteDetail() {
                       
                       <div className="flex-1 min-w-0">
                         <h3 className="text-gray-200 font-medium text-sm truncate">
-                          {note.user_owner?.username || note.user_owner?.fullname || 'Unknown user'}
+                          {note.user_owner?.username || note.username || 'Unknown user'}
                         </h3>
                         <div className="flex gap-2 text-xs text-gray-400">
                           <div className="flex items-center space-x-2">
