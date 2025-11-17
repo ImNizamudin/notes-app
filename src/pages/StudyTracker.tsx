@@ -1110,7 +1110,8 @@ export default function StudyTrackers() {
 
     setDeletingCourseId(courseId);
     try {
-      await apiClient(`/study_trackers/${courseId}`, "DELETE", undefined, {}, noteId.toString());
+      const response = await apiClient(`/study_trackers/${courseId}`, "DELETE", undefined, {}, noteId);
+      console.log(response)
       
       if (data) {
         const updatedData = {
