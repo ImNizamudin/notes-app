@@ -138,6 +138,9 @@ function NoteDetail() {
   // Tambahkan state untuk status copy
   const [copiedCodeId, setCopiedCodeId] = useState<string | null>(null);
 
+  // handle state modal collaboration
+  const [showCollaborationModal, setShowCollaborationModal] = useState(false);
+
   // Fungsi untuk copy code
   const handleCopyCode = async (code: string) => {
     try {
@@ -579,31 +582,6 @@ function NoteDetail() {
                         </div>
                       </div>
                     </div>
-                    
-                    {/* Action Buttons - Conditional based on permissions */}
-                    {/* {(canEditNote || canDeleteNote) && (
-                      <div className="flex items-center space-x-3">
-                        {canEditNote && (
-                          <Link
-                            to={`/notes/${note.id}/edit`}
-                            className="flex items-center space-x-2 px-2 py-2 bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-lg hover:from-blue-700 hover:to-blue-600 transition-all duration-200 shadow-lg hover:shadow-blue-500/25"
-                          >
-                            <Edit3 className="w-3 h-3" />
-                            <span className="text-sm">Edit</span>
-                          </Link>
-                        )}
-                        {canDeleteNote && (
-                          <button
-                            onClick={onDelete}
-                            disabled={deleting}
-                            className="flex items-center space-x-2 px-2 py-2 bg-gradient-to-r from-red-600 to-red-500 text-white rounded-lg hover:from-red-700 hover:to-red-600 transition-all duration-200 shadow-lg hover:shadow-red-500/25 disabled:opacity-50"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                            <span className="text-sm">{deleting ? "Deleting..." : "Delete"}</span>
-                          </button>
-                        )}
-                      </div>
-                    )}*/}
 
                       {(canEditNote || canDeleteNote || note.type === "tracker") && (
                       <div className="flex items-center space-x-3">
@@ -736,8 +714,8 @@ function NoteDetail() {
                         ))}
                       </div>
                     ) : null}
-
-                    {/* Metadata Row - Type, Visibility, Study Tracker Button */}
+                    
+                    {/* Metadata Row - Type, Visibility, Collaboration Button */}
                     <div className="flex flex-wrap items-center gap-3">
                       {/* Type Badge */}
                       <div className="flex items-center space-x-2">
@@ -775,27 +753,20 @@ function NoteDetail() {
                         </span>
                       </div>
 
-                      {/* Collaborators Button (jika visibility collaboration) */}
-                      {note.visibility === 'collaboration' && (
-                        <button
-                          onClick={() => {
-                            // TODO: Implement modal untuk melihat/mengelola collaborators
-                            console.log('Open collaborators modal');
-                          }}
-                          className="inline-flex items-center space-x-1 px-3 py-1 bg-indigo-900/50 text-indigo-300 border border-indigo-700 rounded-lg text-sm font-medium hover:bg-indigo-800/50 transition-colors"
-                        >
-                          <Users className="w-3 h-3" />
-                          <span>Collaborators</span>
-                          {note.user_collaborators && (
-                            <span className="bg-indigo-600 text-white text-xs px-1.5 py-0.5 rounded-full">
-                              {Array.isArray(note.user_collaborators) ? note.user_collaborators.length : 0}
-                            </span>
-                          )}
-                        </button>
-                      )}
+                      {/* Collaboration Button - SELALU TAMPIL untuk private dan collaboration */}
+                      <button
+                        onClick={() => setShowCollaborationModal(true)}
+                        className="inline-flex items-center space-x-1 px-3 py-1 bg-indigo-900/50 text-indigo-300 border border-indigo-700 rounded-lg text-sm font-medium hover:bg-indigo-800/50 transition-colors"
+                      >
+                        <Users className="w-3 h-3" />
+                        <span>Collaborators</span>
+                        <span className="bg-indigo-600 text-white text-xs px-1.5 py-0.5 rounded-full">
+                          {1 + (Array.isArray(note.user_collaborators) ? note.user_collaborators.length : 0)}
+                        </span>
+                      </button>
                     </div>
+
                   </div>
-                  
                 </div>
               </div>
 
@@ -1395,6 +1366,134 @@ function NoteDetail() {
           </div>
         </div>
       )}
+
+      {/* Collaboration Modal */}
+      {showCollaborationModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-xl w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+            <div className="p-6 border-b border-gray-700 flex justify-between items-center">
+              <div>
+                <h2 className="text-xl font-bold text-gray-100">Collaborators</h2>
+                <p className="text-gray-400 text-sm mt-1">
+                  Note visibility: <span className="capitalize">{note.visibility}</span>
+                </p>
+              </div>
+              <button
+                onClick={() => setShowCollaborationModal(false)}
+                className="p-2 text-gray-400 hover:text-gray-200 hover:bg-gray-700 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto flex-grow">
+              {/* Note Owner */}
+              <div className="mb-6">
+                <h3 className="text-lg font-medium text-gray-300 mb-3">Note Owner</h3>
+                <div className="flex items-center justify-between bg-gray-700 p-4 rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-lg">
+                      {getInitials(note.user_owner?.username || "")}
+                    </div>
+                    <div>
+                      <p className="text-gray-100 font-medium text-lg">
+                        {note.user_owner?.username || note.username || 'Unknown user'}
+                      </p>
+                      <p className="text-gray-400 text-sm">
+                        {note.user_owner?.email || 'No email'}
+                      </p>
+                    </div>
+                  </div>
+                  <span className="px-3 py-1 bg-blue-900/50 text-blue-300 border border-blue-700 rounded-full text-sm">
+                    Owner
+                  </span>
+                </div>
+              </div>
+
+              {/* Current Collaborators */}
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-medium text-gray-300">
+                    Collaborators ({Array.isArray(note.user_collaborators) ? note.user_collaborators.length : 0})
+                  </h3>
+                </div>
+                
+                {Array.isArray(note.user_collaborators) && note.user_collaborators.length > 0 ? (
+                  <div className="space-y-3">
+                    {note.user_collaborators.map((collaborator: any, index: number) => (
+                      <div key={collaborator.id || index} className="flex items-center justify-between bg-gray-700 p-4 rounded-lg">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-blue-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
+                            {getInitials(collaborator.username || collaborator.email || 'U')}
+                          </div>
+                          <div>
+                            <p className="text-gray-100 font-medium">
+                              {collaborator.username || collaborator.email || 'Unknown User'}
+                            </p>
+                            <p className="text-gray-400 text-sm">
+                              {collaborator.email || 'No email'}
+                            </p>
+                          </div>
+                        </div>
+                        
+                        {/* Role Badge */}
+                        <span className={`px-3 py-1 text-sm rounded-full ${
+                          collaborator.role === 'admin' 
+                            ? 'bg-purple-900/50 text-purple-300 border border-purple-700'
+                            : 'bg-green-900/50 text-green-300 border border-green-700'
+                        }`}>
+                          {collaborator.role || 'collaborator'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-400 bg-gray-700/50 rounded-lg">
+                    <Users className="w-16 h-16 mx-auto mb-3 opacity-50" />
+                    <p className="text-lg">No collaborators</p>
+                    <p className="text-sm mt-1">
+                      {note.visibility === 'private' 
+                        ? 'This note is private and has no collaborators.'
+                        : 'No collaborators have been added to this note yet.'
+                      }
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Info untuk private visibility */}
+              {note.visibility === 'private' && (
+                <div className="border-t border-gray-700 pt-6">
+                  <div className="bg-blue-900/20 border border-blue-700 rounded-lg p-4">
+                    <div className="flex items-start space-x-3">
+                      <Lock className="w-5 h-5 text-blue-400 mt-0.5" />
+                      <div>
+                        <h4 className="text-blue-300 font-medium mb-1">Private Note</h4>
+                        <p className="text-blue-200 text-sm">
+                          This note is private and can only be accessed by the owner.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="p-6 border-t border-gray-700 flex justify-between items-center">
+              <div className="text-gray-400 text-sm">
+                Total: {1 + (Array.isArray(note.user_collaborators) ? note.user_collaborators.length : 0)} people
+              </div>
+              <button
+                onClick={() => setShowCollaborationModal(false)}
+                className="px-6 py-3 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Image View Modal */}
       <ImageViewModal
         isOpen={viewModalOpen}

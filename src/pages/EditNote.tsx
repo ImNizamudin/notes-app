@@ -4,17 +4,12 @@ import { useNotesStore, type Note } from "../store/note";
 import { useCollaborationStore } from "../store/collaboration";
 import CollaboratorInput from "../components/CollaboratorInput";
 import { 
-  // Save,
-   X, ArrowLeft, 
-  //  FileText, 
+   X, ArrowLeft,
    Tag, 
-  //  Type, 
    Clock, 
   Users, 
-  // MinusCircle, PlusCircle, MessageCircle, Send, 
   ImageIcon, Eye, Upload, AlertCircle, CheckCircle, RefreshCw, Trash2,
   Lock,
-  //  Globe,
     Earth
 } from "lucide-react";
 import ReactQuill from "react-quill";
@@ -366,7 +361,7 @@ function EditNote() {
 
       navigate(`/notes/${id}`);
     } catch (e: any) {
-      setErr(e.message || "Gagal menyimpan perubahan");
+      setErr(e.response.meta.message);
     } finally {
       setSaving(false);
     }
