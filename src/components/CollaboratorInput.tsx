@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import apiClient from "../api/client";
 import { useCollaborationStore } from "../store/collaboration";
-import { Users, PlusCircle, X, Search, UserPlus, UserMinus } from "lucide-react";
-
+import { Users, Search, UserPlus, UserMinus } from "lucide-react";
+// PlusCircle
 interface CollaboratorInputProps {
   noteId: number;
 }

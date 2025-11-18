@@ -104,16 +104,16 @@ function logout() {
 
 type RequestMethod = "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
 
-function isTokenExpired(token: string) : boolean {
-  try {
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    const exp = payload.exp * 1000; // Convert to milliseconds
-    return Date.now() >= exp;
-  } catch {
-    return true; // If there's an error decoding, assume the token is invalid/expired
-  }
+// function isTokenExpired(token: string) : boolean {
+//   try {
+//     const payload = JSON.parse(atob(token.split('.')[1]));
+//     const exp = payload.exp * 1000; // Convert to milliseconds
+//     return Date.now() >= exp;
+//   } catch {
+//     return true; // If there's an error decoding, assume the token is invalid/expired
+//   }
 
-}
+// }
 
 async function parseResponse(res: Response) {
   const text = await res.text();

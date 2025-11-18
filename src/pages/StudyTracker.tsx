@@ -33,10 +33,9 @@ interface Session {
 
 interface Assignment {
   score: number | null;
-  is_submitted: string | null;
+  submitted_at: string | null; // ✅ submitted_at, BUKAN is_submitted
   assignment_number: number;
 }
-
 interface StudyTrackerBody {
   id: number;
   name: string;
@@ -55,6 +54,7 @@ interface StudyTrackerData {
   header: StudyTrackerHeader;
   body: StudyTrackerBody[];
   semester: number;
+  status: string;
 }
 
 interface StudyTrackerResponse {
@@ -97,52 +97,43 @@ function SessionModal({ isOpen, onClose, session, courseName, sessionNumber, onS
     setError(null);
   }, [session]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
+ const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setLoading(true);
+  setError(null);
 
-    try {
-      // Prepare the payload
-      const payload = {
-        is_presented: formData.present,
-        is_discussed: formData.discussion,
-        score: formData.score ? parseInt(formData.score) : 0
-      };
+  try {
+    const payload = {
+      is_presented: formData.present,
+      is_discussed: formData.discussion,
+      score: formData.score ? parseInt(String(formData.score)) : null // ✅ JADI null, BUKAN 0
+    };
 
-      console.log('API Parameters:', {
-        studyTrackerId,
-        sessionNumber,
-        payload
-      });
+    await apiClient(
+      `/study_trackers/${studyTrackerId}/sessions/${sessionNumber}`,
+      "PUT",
+      payload,
+      {},
+      noteId
+    );
 
-      // Make API call - menggunakan studyTrackerId dan session.id
-      const response = await apiClient(
-        `/study_trackers/${studyTrackerId}/sessions/${sessionNumber}`,
-        "PUT",
-        payload,
-        {},
-        noteId
-      );
+    const sessionData: Partial<Session> = {
+      session_number: sessionNumber,
+      present_at: formData.present ? new Date().toISOString() : null,
+      discussion_at: formData.discussion ? new Date().toISOString() : null,
+      score: formData.score ? parseInt(String(formData.score)) : null // ✅ JADI null
+    };
 
-      // Update local state
-      const sessionData: Partial<Session> = {
-        session_number: sessionNumber,
-        present_at: formData.present ? new Date().toISOString() : null,
-        discussion_at: formData.discussion ? new Date().toISOString() : null,
-        score: formData.score ? parseInt(formData.score) : null
-      };
-
-      onSave(sessionData);
-      onClose();
-      
-    } catch (err: any) {
-      console.error('Error saving session:', err);
-      setError(err.response?.data?.message || err.response?.meta?.message || "Failed to save session data");
-    } finally {
-      setLoading(false);
-    }
-  };
+    onSave(sessionData);
+    onClose();
+    
+  } catch (err: any) {
+    console.error('Error saving session:', err);
+    setError(err.response?.data?.message || err.response?.meta?.message || "Failed to save session data");
+  } finally {
+    setLoading(false);
+  }
+};
 
   if (!isOpen) return null;
 
@@ -277,7 +268,8 @@ function AssignmentModal({ isOpen, onClose, assignment, courseName, assignmentNu
       // Prepare the payload according to API requirements
       const payload = {
         submitted_at: formData.submitted, // true/false
-        score: formData.score ? parseInt(formData.score) : 0
+        score: formData.score ? Number(formData.score) : 0
+        // score: formData.score ? parseInt(formData.score) : 0
       };
 
       console.log('Sending assignment payload:', payload);
@@ -299,7 +291,8 @@ function AssignmentModal({ isOpen, onClose, assignment, courseName, assignmentNu
       const assignmentData: Partial<Assignment> = {
         assignment_number: assignmentNumber,
         submitted_at: formData.submitted ? new Date().toISOString() : null,
-        score: formData.score ? parseInt(formData.score) : null
+        score: formData.score ? Number(formData.score) : 0
+        // score: formData.score ? parseInt(formData.score) : null
       };
 
       onSave(assignmentData);
@@ -430,7 +423,7 @@ interface AddStudyModalProps {
 function AddStudyModal({ isOpen, onClose, noteId }: AddStudyModalProps) {
   const [selectedStudies, setSelectedStudies] = useState<number[]>([]);
   const [studies, setStudies] = useState<Study[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [searchLoading, setSearchLoading] = useState(false);
   const [adding, setAdding] = useState(false);
@@ -438,26 +431,28 @@ function AddStudyModal({ isOpen, onClose, noteId }: AddStudyModalProps) {
   const [totalPages, setTotalPages] = useState(1);
 
   // Fetch studies dengan search dan pagination
-  const fetchStudies = async (search: string = "", page: number = 1) => {
-    setSearchLoading(true);
-    try {
-      const params = new URLSearchParams({
-        limit: "10",
-        page: page.toString(),
-        ...(search && { search })
-      });
+const fetchStudies = async (search: string = "", page: number = 1) => {
+  setSearchLoading(true);
+  try {
+    const params = new URLSearchParams({
+      limit: "10",
+      page: page.toString(),
+      ...(search && { search })
+    });
 
-      const response: StudiesResponse = await apiClient(`/studies?${params}`, "GET");
-      console.log(response)
-      setStudies(response.studies || []);
-      setTotalPages(response.page.total_page);
-      setCurrentPage(response.page.current_page);
-    } catch (error: any) {
-      console.error("Error fetching studies:", error);
-    } finally {
-      setSearchLoading(false);
-    }
-  };
+    const response: StudiesResponse = await apiClient(`/studies?${params}`, "GET");
+    console.log(response);
+    
+    // ✅ PERBAIKI: Gunakan response.data.studies bukan response.studies
+    setStudies(response.data.studies || []);
+    setTotalPages(response.page.total_page);
+    setCurrentPage(response.page.current_page);
+  } catch (error: any) {
+    console.error("Error fetching studies:", error);
+  } finally {
+    setSearchLoading(false);
+  }
+};
 
   // Debounce search
   useEffect(() => {
@@ -786,7 +781,7 @@ export default function StudyTrackers() {
   const [showAssignmentModal, setShowAssignmentModal] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [showAddStudyModal, setShowAddStudyModal] = useState(false);
-  const [showDeleteStudyModal, setShowDeleteStudyModal] = useState(false);
+  // const [showDeleteStudyModal, setShowDeleteStudyModal] = useState(false);
 
   const [deletingCourseId, setDeletingCourseId] = useState<number | null>(null);
 
@@ -812,42 +807,67 @@ export default function StudyTrackers() {
 
   }, [noteId]);
 
-  const fetchStudyTracker = async (noteId: string) => {
-    try {
-      setLoading(true);
-      setError(null);
-      const response: StudyTrackerResponse = await apiClient("/study_trackers", "GET", undefined, {}, noteId.toString());
+const fetchStudyTracker = async (noteId: string) => {
+  try {
+    setLoading(true);
+    setError(null);
+    const response = await apiClient("/study_trackers", "GET", undefined, {}, noteId.toString());
+    
+    console.log("Study Tracker API Response:", response); // ✅ DEBUG LOG
+    
+    // ✅ PERBAIKI: Handle berbagai kemungkinan struktur response
+    if (response?.data?.study_tracker) {
+      setData(response.data.study_tracker);
+    } else if (response?.study_tracker) {
+      // Jika response langsung memiliki study_tracker (tanpa data wrapper)
       setData(response.study_tracker);
-    } catch (err: any) {
-      setError(err.response?.meta?.message || "Failed to load study tracker data");
-      console.log(err)
-    } finally {
-      setLoading(false);
+    } else if (response) {
+      // Jika response adalah data langsung
+      setData(response);
+    } else {
+      throw new Error("Invalid response structure");
     }
-  };
+    
+  } catch (err: any) {
+    console.error("Error fetching study tracker:", err);
+    setError(err.response?.meta?.message || err.message || "Failed to load study tracker data");
+  } finally {
+    setLoading(false);
+  }
+};
 
   // Action Handlers
-  const handleGenerateStudyTracker = async (noteId: string) => {
-    try {
-      const response: StudyTrackerResponse = await apiClient("/study_trackers", "POST", undefined, {}, noteId.toString());
-      alert("Study tracker berhasil dibuat!");
-      await fetchStudyTracker(noteId)
-    } catch (err) {
-      setError(err.response?.meta?.message);
-      alert(err.response?.meta?.message);
-    }
-  };
+ const handleGenerateStudyTracker = async (noteId: string) => {
+  try {
+    // ✅ HAPUS 'const response = ' karena tidak digunakan
+    await apiClient("/study_trackers", "POST", undefined, {}, noteId.toString());
+    alert("Study tracker berhasil dibuat!");
+    await fetchStudyTracker(noteId);
+  } catch (err: any) { // ✅ TAMBAHKIN ': any' atau gunakan type guard
+    console.error("Error generating study tracker:", err);
+    
+    // ✅ PERBAIKI error handling
+    const errorMessage = err.response?.meta?.message || "Failed to generate study tracker";
+    setError(errorMessage);
+    alert(errorMessage);
+  }
+};
 
-  const handleSubmitStudy = async (noteId: string) => {
-    try {
-      const response: StudyTrackerResponse = await apiClient("/study_trackers/submit", "PUT", undefined, {}, noteId.toString());
-      alert("Study tracker berhasil disimpan!");
-      await fetchStudyTracker(noteId)
-    } catch (err) {
-      setError(err.response?.meta?.message || "Failed to submit study");
-      alert(err.response?.meta?.message);
-    }
-  };
+const handleSubmitStudy = async (noteId: string) => {
+  try {
+    // ✅ HAPUS 'const response = ' karena tidak digunakan
+    await apiClient("/study_trackers/submit", "PUT", undefined, {}, noteId.toString());
+    alert("Study tracker berhasil disimpan!");
+    await fetchStudyTracker(noteId);
+  } catch (err: any) { // ✅ TAMBAHKIN ': any' untuk akses property response
+    console.error("Error submitting study:", err);
+    
+    // ✅ PERBAIKI error handling
+    const errorMessage = err.response?.meta?.message || "Failed to submit study";
+    setError(errorMessage);
+    alert(errorMessage);
+  }
+};
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("id-ID", {
@@ -1271,7 +1291,7 @@ export default function StudyTrackers() {
               </thead>
               
               <tbody>
-                {data.body.map((course, index) => {
+                {data.body.map((course) => {
                   const stats = calculateCourseStats(course);
                   
                   return (
@@ -1477,20 +1497,20 @@ export default function StudyTrackers() {
       />
 
       {/* Assignment Modal */}
-      <AssignmentModal
-        isOpen={showAssignmentModal}
-        onClose={() => setShowAssignmentModal(false)}
-        assignment={selectedAssignment?.assignment || { 
-          assignment_number: 0, 
-          score: null, 
-          is_submitted: null 
-        }}
-        courseName={selectedAssignment?.courseName || ''}
-        assignmentNumber={selectedAssignment?.assignmentNumber || 0}
-        onSave={handleSaveAssignment}
-        noteId={noteId}
-        studyTrackerId={selectedAssignment?.courseId || 0}
-      />
+    <AssignmentModal
+  isOpen={showAssignmentModal}
+  onClose={() => setShowAssignmentModal(false)}
+  assignment={selectedAssignment?.assignment || { 
+    assignment_number: 0, 
+    score: null, 
+    submitted_at: null // ✅ GANTI is_submitted MENJADI submitted_at
+  }}
+  courseName={selectedAssignment?.courseName || ''}
+  assignmentNumber={selectedAssignment?.assignmentNumber || 0}
+  onSave={handleSaveAssignment}
+  noteId={noteId}
+  studyTrackerId={selectedAssignment?.courseId || 0}
+/>
 
       <AddStudyModal
         isOpen={showAddStudyModal}

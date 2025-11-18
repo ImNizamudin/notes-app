@@ -6,11 +6,19 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd());
 
   return {
+    base: './',
     plugins: [
       react(),
-      visualizer({ open: true }),
+      ...(mode === 'analyze' 
+        ? [visualizer({ 
+            open: true,
+            filename: 'dist/stats.html'
+          })] 
+        : []
+      )
     ],
-    server: {
+    
+    server: mode === 'development' ? {
       proxy: {
         "/api": {
           target: env.VITE_API_BASE_URL,
@@ -19,8 +27,10 @@ export default defineConfig(({ mode }) => {
           rewrite: (path) => path.replace(/^\/api/, ""),
         },
       },
-    },
+    } : undefined,
+    
     build: {
+      chunkSizeWarningLimit: 1000,
       rollupOptions: {
         output: {
           manualChunks(id) {
@@ -28,6 +38,7 @@ export default defineConfig(({ mode }) => {
               if (id.includes('react-quill')) return 'quill';
               if (id.includes('highlight.js')) return 'highlight';
               if (id.includes('react')) return 'react';
+              if (id.includes('lucide-react')) return 'lucide';
               return 'vendor';
             }
           },
@@ -36,7 +47,6 @@ export default defineConfig(({ mode }) => {
     },
   };
 });
-
 
 // npm install --save-dev @types/node
 // npx vite build --mode production

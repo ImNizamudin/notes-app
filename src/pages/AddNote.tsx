@@ -4,9 +4,17 @@ import "react-quill/dist/quill.snow.css";
 import { useNotesStore } from "../store/note";
 import { useNavigate } from "react-router-dom";
 import { 
-  Save, X, ArrowLeft, FileText, Tag, Type, 
-  ImageIcon, Plus, Trash2, Upload, AlertCircle, 
-  CheckCircle, Download, Eye, RefreshCw, Lock, Globe,
+  //  Plus,
+  // Type,  Save,
+  //  Download, Eye, 
+  //   Globe,
+
+  X, ArrowLeft, FileText, Tag, 
+  ImageIcon,
+    Trash2, Upload, AlertCircle, 
+  CheckCircle,
+
+   RefreshCw, Lock,
   Earth, User
 } from "lucide-react";
 import hljs from "highlight.js";
@@ -248,14 +256,14 @@ function AddNote() {
   const [loadingGallery, setLoadingGallery] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({});
+  const [] = useState<{ [key: string]: number }>({});
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadSuccess, setUploadSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const quillRef = useRef<ReactQuill>(null);
+  // const quillRef = useRef<ReactQuill>(null);
 
   // Fetch gallery files
   useEffect(() => {
@@ -311,10 +319,10 @@ function AddNote() {
           formData.append(fieldName, file);
 
           // Simulate progress
-          for (let progress = 0; progress <= 100; progress += 10) {
-            setUploadProgress(prev => ({ ...prev, [file.name]: progress }));
-            await new Promise(resolve => setTimeout(resolve, 50));
-          }
+          // for (let progress = 0; progress <= 100; progress += 10) {
+          //   setUploadProgress(prev => ({ ...prev, [file.name]: progress }));
+          //   await new Promise(resolve => setTimeout(resolve, 50));
+          // }
 
           await apiClient("/files/notes_app/bulk-upload", "POST", formData);
         } catch (fileError: any) {
@@ -336,7 +344,7 @@ function AddNote() {
       setUploadError(err.response?.meta?.message || "Failed to upload files");
     } finally {
       setUploading(false);
-      setUploadProgress({});
+      // setUploadProgress({});
     }
   };
 

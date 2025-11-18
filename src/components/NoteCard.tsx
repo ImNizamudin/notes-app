@@ -38,16 +38,16 @@ function NoteCard({ note }: Props) {
     };
 
     // Function to get type badge color
-    const getTypeBadgeColor = () => {
-        switch (note.type) {
-            case 'tracker':
-                return 'bg-orange-900/50 text-orange-300 border-orange-700';
-            case 'daily_note':
-                return 'bg-blue-900/50 text-blue-300 border-blue-700';
-            default:
-                return 'bg-gray-700 text-gray-300 border-gray-600';
-        }
-    };
+    // const getTypeBadgeColor = () => {
+    //     switch (note.type) {
+    //         case 'tracker':
+    //             return 'bg-orange-900/50 text-orange-300 border-orange-700';
+    //         case 'daily_note':
+    //             return 'bg-blue-900/50 text-blue-300 border-blue-700';
+    //         default:
+    //             return 'bg-gray-700 text-gray-300 border-gray-600';
+    //     }
+    // };
 
     const handleDelete = async () => {
         if (!confirm("Hapus catatan ini?")) return;

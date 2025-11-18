@@ -4,10 +4,18 @@ import { useNotesStore, type Note } from "../store/note";
 import { useCollaborationStore } from "../store/collaboration";
 import CollaboratorInput from "../components/CollaboratorInput";
 import { 
-  Save, X, ArrowLeft, FileText, Tag, Type, Clock, 
-  Users, MinusCircle, PlusCircle, MessageCircle, Send, 
+  // Save,
+   X, ArrowLeft, 
+  //  FileText, 
+   Tag, 
+  //  Type, 
+   Clock, 
+  Users, 
+  // MinusCircle, PlusCircle, MessageCircle, Send, 
   ImageIcon, Eye, Upload, AlertCircle, CheckCircle, RefreshCw, Trash2,
-  Lock, Globe, Earth
+  Lock,
+  //  Globe,
+    Earth
 } from "lucide-react";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
@@ -84,20 +92,20 @@ interface GalleryResponse {
   };
 }
 
-interface Collaboration {
-  id: string;
-  created_at: string;
-  updated_at: string;
-  note_id: number;
-  user_id: number;
-  user: {
-    id: number;
-    username: string;
-    fullname: string;
-    email: string;
-  };
-  body: string;
-}
+// interface Collaboration {
+//   id: string;
+//   created_at: string;
+//   updated_at: string;
+//   note_id: number;
+//   user_id: number;
+//   user: {
+//     id: number;
+//     username: string;
+//     fullname: string;
+//     email: string;
+//   };
+//   body: string;
+// }
 
 // Modal untuk visibility options
 interface VisibilityModalProps {
@@ -175,13 +183,13 @@ function EditNote() {
   const navigate = useNavigate();
 
   const {  
-    collaborations,
-    loading: collaborationsLoading, 
-    addOrUpdateComment, 
-    deleteComment
+    // collaborations,
+    // loading: collaborationsLoading, 
+    // addOrUpdateComment, 
+    // deleteComment
   } = useCollaborationStore();
 
-  const collaborationsComment = collaborations.filter((c) => c.body);
+  // const collaborationsComment = collaborations.filter((c) => c.body);
 
   const getNote = useNotesStore((s) => s.getNote);
   const fetchNoteById = useNotesStore((s) => s.fetchNoteById);
@@ -200,7 +208,7 @@ function EditNote() {
   const [loadingGallery, setLoadingGallery] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({});
+  const [] = useState<{ [key: string]: number }>({});
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadSuccess, setUploadSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -297,10 +305,10 @@ function EditNote() {
           formData.append(fieldName, file);
 
           // Simulate progress
-          for (let progress = 0; progress <= 100; progress += 10) {
-            setUploadProgress(prev => ({ ...prev, [file.name]: progress }));
-            await new Promise(resolve => setTimeout(resolve, 50));
-          }
+          // for (let progress = 0; progress <= 100; progress += 10) {
+            // setUploadProgress(prev => ({ ...prev, [file.name]: progress }));
+            // await new Promise(resolve => setTimeout(resolve, 50));
+          // }
 
           await apiClient("/files/notes_app/bulk-upload", "POST", formData);
         } catch (fileError: any) {
@@ -322,7 +330,7 @@ function EditNote() {
       setUploadError(err.response?.meta?.message || "Failed to upload files");
     } finally {
       setUploading(false);
-      setUploadProgress({});
+      // setUploadProgress({});
     }
   };
 

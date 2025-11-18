@@ -4,9 +4,15 @@ import { useCollaborationStore } from "../store/collaboration";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { 
   Edit3, Trash2, ArrowLeft, Tag, FileText, Users, Lock, Globe, 
-  MessageCircle, Send, X, Type, ImageIcon, Eye, Plus, RefreshCw, 
+  MessageCircle, Send, X, 
+  // Type, 
+  ImageIcon, Eye,
+  //  Plus,
+    RefreshCw, 
   Upload, AlertCircle, CheckCircle, ChevronLeft, ChevronRight, 
-  Clock, ImageOff, Menu, EllipsisVertical, Trash, Copy, Check 
+  Clock, ImageOff, 
+  // Menu, EllipsisVertical, Trash, 
+  Copy, Check 
 } from "lucide-react";
 import DOMPurify from "dompurify";
 import hljs from "highlight.js";
@@ -122,7 +128,7 @@ function NoteDetail() {
   const [loadingGallery, setLoadingGallery] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState<{[key: string]: number;}>({});
+  const [] = useState<{[key: string]: number;}>({});
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadSuccess, setUploadSuccess] = useState<string | null>(null);
 
@@ -324,10 +330,10 @@ function NoteDetail() {
           const formData = new FormData();
           formData.append("fields", fieldName);
           formData.append(fieldName, file);
-          for (let progress = 0; progress <= 100; progress += 10) {
-            setUploadProgress((prev) => ({ ...prev, [file.name]: progress }));
-            await new Promise((resolve) => setTimeout(resolve, 50));
-          }
+          // for (let progress = 0; progress <= 100; progress += 10) {
+          //   setUploadProgress((prev) => ({ ...prev, [file.name]: progress }));
+          //   await new Promise((resolve) => setTimeout(resolve, 50));
+          // }
           await apiClient("/files/notes_app/bulk-upload", "POST", formData);
         } catch (fileError: any) {
           console.error(`Error uploading ${file.name}:`, fileError);
@@ -345,7 +351,7 @@ function NoteDetail() {
       setUploadError(err.response?.meta?.message || "Failed to upload files");
     } finally {
       setUploading(false);
-      setUploadProgress({});
+      // setUploadProgress({});
     }
   };
 

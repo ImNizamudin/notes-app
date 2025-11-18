@@ -57,7 +57,7 @@ function NoteList() {
         setJoinSuccess(false);
 
         try {
-            const response = await apiClient("/collaborations/join", "POST", {
+            await apiClient("/collaborations/join", "POST", {
                 code: joinCode.trim()
             });
 
