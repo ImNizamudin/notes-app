@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, BookOpen, Calendar, Clock, CheckCircle, FileText, TrendingUp, Download, MessageCircle, Plus, Trash2, PlusCircle, Send, Database, X } from "lucide-react";
+import { ArrowLeft, BookOpen, Calendar, Clock, CheckCircle, FileText, TrendingUp, Download, MessageCircle, Plus, Trash2, PlusCircle, Send, Database, X, Users, Zap } from "lucide-react";
 import { apiClient } from "../api/client";
 import { useLocation } from 'react-router-dom';
 
@@ -760,6 +760,198 @@ const fetchStudies = async (search: string = "", page: number = 1) => {
   );
 }
 
+interface WebinarHeader {
+  end_at: string;
+  start_at: string;
+  webinar_number: number;
+}
+
+interface Webinar {
+  score: number | null;
+  present_at: string | null;
+  webinar_number: number;
+}
+
+// Update StudyTrackerHeader interface
+interface StudyTrackerHeader {
+  id: number;
+  year: number;
+  period: number;
+  session_headers: SessionHeader[];
+  assignment_headers: AssignmentHeader[];
+  webinar_headers: WebinarHeader[]; // Tambahkan ini
+}
+
+// Update StudyTrackerBody interface
+interface StudyTrackerBody {
+  id: number;
+  name: string;
+  sks: number;
+  is_practical: boolean;
+  status: string;
+  semester: number;
+  submit_assignment_first: string | null;
+  submit_assignment_second: string | null;
+  submit_assignment_third: string | null;
+  sessions: Session[];
+  assignments: Assignment[];
+  webinars: Webinar[]; // Tambahkan ini
+}
+
+// Tambahkan WebinarModal component
+interface WebinarModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  webinar: Webinar;
+  courseName: string;
+  studyTrackerId: number;
+  webinarNumber: number;
+  onSave: (webinarData: Partial<Webinar>) => void;
+  noteId: string;
+}
+
+function WebinarModal({ isOpen, onClose, webinar, courseName, webinarNumber, onSave, noteId, studyTrackerId }: WebinarModalProps) {
+  const [formData, setFormData] = useState({
+    present: !!webinar.present_at,
+    score: webinar.score || ''
+  });
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setFormData({
+      present: !!webinar.present_at,
+      score: webinar.score || ''
+    });
+    setError(null);
+  }, [webinar]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Prepare the payload
+      const payload = {
+        is_presented: formData.present,
+        score: formData.score ? parseInt(formData.score) : 0
+      };
+
+      console.log('API Parameters:', {
+        studyTrackerId,
+        webinarNumber,
+        payload
+      });
+
+      // Make API call - menggunakan studyTrackerId dan webinar.id
+      const response = await apiClient(
+        `/study_trackers/${studyTrackerId}/webinars/${webinarNumber}`,
+        "PUT",
+        payload,
+        {},
+        noteId
+      );
+
+      // Update local state
+      const webinarData: Partial<Webinar> = {
+        webinar_number: webinarNumber,
+        present_at: formData.present ? new Date().toISOString() : null,
+        score: formData.score ? parseInt(formData.score) : null
+      };
+
+      onSave(webinarData);
+      onClose();
+      
+    } catch (err: any) {
+      console.error('Error saving webinar:', err);
+      setError(err.response?.data?.message || err.response?.meta?.message || "Failed to save webinar data");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+      <div className="bg-gray-800 rounded-xl w-full max-w-md">
+        <div className="p-6 border-b border-gray-700">
+          <h2 className="text-xl font-bold text-gray-100">Edit Webinar</h2>
+          <p className="text-gray-400 text-sm mt-1">
+            {courseName} - Webinar {webinarNumber}
+          </p>
+        </div>
+        
+        <form onSubmit={handleSubmit} className="p-6">
+          {error && (
+            <div className="mb-4 p-3 bg-red-900/50 border border-red-700 rounded-lg">
+              <p className="text-red-200 text-sm">{error}</p>
+            </div>
+          )}
+          
+          {/* Present Checkbox */}
+          <div className="mb-4">
+            <label className="flex items-center space-x-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.present}
+                onChange={(e) => setFormData(prev => ({ ...prev, present: e.target.checked }))}
+                className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 focus:ring-2"
+              />
+              <div className="flex items-center space-x-2">
+                <CheckCircle className="w-5 h-5 text-green-400" />
+                <span className="text-gray-300">Hadir</span>
+              </div>
+            </label>
+          </div>
+
+          {/* Score Input */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Nilai
+            </label>
+            <input
+              type="number"
+              min="0"
+              max="100"
+              value={formData.score}
+              onChange={(e) => setFormData(prev => ({ ...prev, score: e.target.value }))}
+              className="w-full bg-gray-700 border border-gray-600 text-gray-100 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="Masukkan nilai (0-100)"
+            />
+          </div>
+
+          <div className="flex space-x-3">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={loading}
+              className="flex-1 px-4 py-3 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 disabled:opacity-50 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-500 disabled:opacity-50 transition-colors flex items-center justify-center"
+            >
+              {loading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Saving...
+                </>
+              ) : (
+                'Save'
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 
 export default function StudyTrackers() {
   const navigate = useNavigate();
@@ -784,6 +976,14 @@ export default function StudyTrackers() {
   // const [showDeleteStudyModal, setShowDeleteStudyModal] = useState(false);
 
   const [deletingCourseId, setDeletingCourseId] = useState<number | null>(null);
+
+  const [selectedWebinar, setSelectedWebinar] = useState<{
+    courseId: number;
+    courseName: string;
+    webinar: Webinar;
+    webinarNumber: number;
+  } | null>(null);
+  const [showWebinarModal, setShowWebinarModal] = useState(false);
 
   const location = useLocation();
   const noteId = location.state?.noteId;
@@ -1105,6 +1305,81 @@ const handleSubmitStudy = async (noteId: string) => {
     }
   };
 
+  const handleWebinarClick = (courseId: number, courseName: string, webinar: Webinar) => {
+    setSelectedWebinar({
+      courseId,
+      courseName,
+      webinar,
+      webinarNumber: webinar.webinar_number
+    });
+    setShowWebinarModal(true);
+  };
+
+  const handleSaveWebinar = async (webinarData: Partial<Webinar>) => {
+    if (!selectedWebinar || !data) return;
+
+    // Update local state
+    const updatedData = { ...data };
+    const courseIndex = updatedData.body.findIndex(course => course.id === selectedWebinar.courseId);
+    
+    if (courseIndex !== -1) {
+      const webinarIndex = updatedData.body[courseIndex].webinars.findIndex(
+        w => w.webinar_number === selectedWebinar.webinarNumber
+      );
+      
+      if (webinarIndex !== -1) {
+        updatedData.body[courseIndex].webinars[webinarIndex] = {
+          ...updatedData.body[courseIndex].webinars[webinarIndex],
+          ...webinarData
+        };
+        setData(updatedData);
+      }
+    }
+  };
+
+  const getWebinarStatus = (webinar: Webinar) => {
+    const statuses = [];
+    
+    if (webinar.present_at) {
+      statuses.push({
+        type: 'present',
+        icon: <CheckCircle className="w-4 h-4 text-green-400" />,
+        tooltip: 'Hadir'
+      });
+    }
+    
+    if (webinar.score !== null) {
+      statuses.push({
+        type: 'score',
+        content: (
+          <span className="text-sm font-medium text-yellow-400">
+            {webinar.score}
+          </span>
+        ),
+        tooltip: `Nilai: ${webinar.score}`
+      });
+    }
+    
+    return statuses;
+  };
+
+  // Tambahkan fungsi handleFinalize
+  const handleFinalize = async (noteId: string) => {
+    if (!confirm("Apakah Anda yakin ingin memfinalisasi study tracker? Setelah difinalisasi, data tidak dapat diubah lagi.")) {
+      return;
+    }
+
+    try {
+      const response: StudyTrackerResponse = await apiClient("/study_trackers/finalize", "PUT", undefined, {}, noteId.toString());
+      alert("Study tracker berhasil difinalisasi!");
+      await fetchStudyTracker(noteId);
+    } catch (err: any) {
+      const errorMessage = err.response?.meta?.message || "Failed to finalize study tracker";
+      setError(errorMessage);
+      alert(errorMessage);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-900">
       {/* Header */}
@@ -1184,14 +1459,13 @@ const handleSubmitStudy = async (noteId: string) => {
                 <span>Submit Study</span>
               </button>
 
-              {/* Delete Study Button */}
-              {/* <button
-                onClick={() => setShowDeleteStudyModal(true)}
+              <button
+                onClick={() => handleFinalize(noteId)}
                 className="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-500 transition-colors"
               >
-                <Trash2 className="w-4 h-4" />
-                <span>Delete Study</span>
-              </button> */}
+                <Zap className="w-4 h-4" />
+                <span>Finalize</span>
+              </button>
             </div>
           )}
           
@@ -1237,6 +1511,15 @@ const handleSubmitStudy = async (noteId: string) => {
               <FileText className="w-8 h-8 text-orange-400" />
             </div>
           </div>
+          <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-400 text-sm">Webinars</p>
+                <p className="text-2xl font-bold text-gray-100">{data.header.webinar_headers?.length || 0}</p>
+              </div>
+              <Users className="w-8 h-8 text-pink-400" />
+            </div>
+          </div>
         </div>
 
         {/* Table Container */}
@@ -1270,6 +1553,18 @@ const handleSubmitStudy = async (noteId: string) => {
                         <span className="text-sm font-semibold">A{assignmentHeader.assignment_number}</span>
                         <span className="text-xs text-gray-400 mt-1">
                           Due {formatDate(assignmentHeader.end_at)}
+                        </span>
+                      </div>
+                    </th>
+                  ))}
+
+                  {/* Webinars Headers */}
+                  {data.header.webinar_headers?.map((webinarHeader) => (
+                    <th key={webinarHeader.webinar_number} className="text-center p-4 text-gray-300 font-medium bg-gray-750 w-[100px]">
+                      <div className="flex flex-col items-center">
+                        <span className="text-sm font-semibold">W{webinarHeader.webinar_number}</span>
+                        <span className="text-xs text-gray-400 mt-1">
+                          {formatDate(webinarHeader.start_at)}
                         </span>
                       </div>
                     </th>
@@ -1398,6 +1693,46 @@ const handleSubmitStudy = async (noteId: string) => {
                         );
                       })}
                       
+                      {/* Webinars Data */}
+                      {course.webinars?.map((webinar) => {
+                        const webinarStatuses = getWebinarStatus(webinar);
+                        const isEmpty = webinarStatuses.length === 0;
+                        
+                        return (
+                          <td 
+                            key={webinar.webinar_number} 
+                            className="text-center p-4"
+                          >
+                            <button
+                              onClick={() => handleWebinarClick(course.id, course.name, webinar)}
+                              className={`w-full h-full flex items-center justify-center space-x-1 min-h-[60px] rounded-lg transition-colors ${
+                                isEmpty 
+                                  ? 'bg-gray-800 hover:bg-gray-600 border border-dashed border-gray-600' 
+                                  : 'cursor-help hover:bg-gray-700'
+                              }`}
+                              title={
+                                isEmpty 
+                                  ? 'Klik untuk menambahkan data' 
+                                  : webinarStatuses.map(s => s.tooltip).join(' • ')
+                              }
+                            >
+                              {isEmpty ? (
+                                <div className="flex flex-col items-center space-y-1">
+                                  {/* <Plus className="w-4 h-4 text-gray-400" />
+                                  <span className="text-xs text-gray-400">Add</span> */}
+                                </div>
+                              ) : (
+                                webinarStatuses.map((status, index) => (
+                                  <div key={index} className="flex items-center">
+                                    {status.icon || status.content}
+                                  </div>
+                                ))
+                              )}
+                            </button>
+                          </td>
+                        );
+                      })}
+                      
                       {/* Stats Columns */}
                       <td className="text-center p-4">
                         <div className="flex flex-col items-center">
@@ -1449,7 +1784,7 @@ const handleSubmitStudy = async (noteId: string) => {
         {/* Legend */}
         <div className="mt-6 p-4 bg-gray-800 border border-gray-700 rounded-lg">
           <h4 className="text-sm font-medium text-gray-300 mb-3">Legend</h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 text-sm">
             <div className="flex items-center space-x-2">
               <CheckCircle className="w-4 h-4 text-green-400" />
               <span className="text-gray-400">Hadir</span>
@@ -1461,6 +1796,10 @@ const handleSubmitStudy = async (noteId: string) => {
             <div className="flex items-center space-x-2">
               <span className="text-sm font-medium text-yellow-400">88</span>
               <span className="text-gray-400">Nilai</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Users className="w-4 h-4 text-pink-400" />
+              <span className="text-gray-400">Webinar</span>
             </div>
             <div className="flex items-center space-x-2">
               <Plus className="w-4 h-4 text-gray-400" />
@@ -1515,6 +1854,21 @@ const handleSubmitStudy = async (noteId: string) => {
       <AddStudyModal
         isOpen={showAddStudyModal}
         onClose={() => setShowAddStudyModal(false)}
+        noteId={noteId}
+      />
+
+      <WebinarModal
+        isOpen={showWebinarModal}
+        onClose={() => setShowWebinarModal(false)}
+        webinar={selectedWebinar?.webinar || { 
+          webinar_number: 0, 
+          score: null, 
+          present_at: null
+        }}
+        courseName={selectedWebinar?.courseName || ''}
+        studyTrackerId={selectedWebinar?.courseId || 0}
+        webinarNumber={selectedWebinar?.webinarNumber || 0}
+        onSave={handleSaveWebinar}
         noteId={noteId}
       />
 
