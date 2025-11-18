@@ -60,55 +60,52 @@ export default function Media() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<GalleryFile | null>(null);
   const [deleting, setDeleting] = useState(false);
-  
+
   // Pagination state from backend
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalFiles, setTotalFiles] = useState(0);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Gunakan ref untuk melacak apakah ini mount pertama
-  const isFirstMount = useRef(true);
+  // const isFirstMount = useRef(true);
 
-  useEffect(() => {
-    if (isFirstMount.current) {
-      isFirstMount.current = false;
-      return; // Skip fetch pada mount pertama
-    }
-    fetchGalleryFiles(currentPage);
-  }, [currentPage]);
+// Hapus semua ref dan state complex, gunakan ini saja:
+useEffect(() => {
+  fetchGalleryFiles(currentPage);
+}, [currentPage]);
 
-  const fetchGalleryFiles = async (page: number = 1) => {
-    setLoadingGallery(true);
-    try {
-      const response: GalleryResponse = await apiClientWithPagination(`/files/notes_app?page=${page}&limit=10`, "GET");
-      
-      // Construct full URLs for each file
-      const filesWithUrls = response.data.files.map(file => ({
-        ...file,
-        url: `${import.meta.env.VITE_API_URL}/upload/${file.path}/${file.name}`
-      }));
-      
-      setGalleryFiles(filesWithUrls);
-      setStorageInfo({
-        total: response.data.total_maximum,
-        used: response.data.total_usage
-      });
-      
-      // Update pagination info from backend
-      setCurrentPage(response.page.current_page);
-      setTotalPages(response.page.total_page);
-      setTotalFiles(response.page.total_data);
-      setItemsPerPage(response.page.limit);
-      
-    } catch (err: any) {
-      setError(err.response?.meta?.message || "Failed to fetch gallery files");
-    } finally {
-      setLoadingGallery(false);
-    }
-  };
+const fetchGalleryFiles = async (page: number = 1) => {
+  setLoadingGallery(true);
+  try {
+    const response: GalleryResponse = await apiClientWithPagination(`/files/notes_app?page=${page}&limit=10`, "GET");
+
+    // Construct full URLs for each file
+    const filesWithUrls = response.data.files.map(file => ({
+      ...file,
+      url: `${import.meta.env.VITE_API_URL}/upload/${file.path}/${file.name}`
+    }));
+
+    setGalleryFiles(filesWithUrls);
+    setStorageInfo({
+      total: response.data.total_maximum,
+      used: response.data.total_usage
+    });
+
+    // Update pagination info from backend
+    setCurrentPage(response.page.current_page);
+    setTotalPages(response.page.total_page);
+    setTotalFiles(response.page.total_data);
+    setItemsPerPage(response.page.limit);
+
+  } catch (err: any) {
+    setError(err.response?.meta?.message || "Failed to fetch gallery files");
+  } finally {
+    setLoadingGallery(false);
+  }
+};
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
@@ -170,8 +167,7 @@ export default function Media() {
         } catch (fileError: any) {
           console.error(`Error uploading ${file.name}:`, fileError);
           setError(
-            `Failed to upload ${file.name}: ${
-              fileError.response?.meta?.message || fileError.message
+            `Failed to upload ${file.name}: ${fileError.response?.meta?.message || fileError.message
             }`
           );
         }
@@ -180,7 +176,7 @@ export default function Media() {
       setUploadedFiles(prev => [...prev, ...results]);
       setSelectedFiles([]);
       setSuccess(`Successfully uploaded ${results.length} file(s)`);
-      
+
       // Refresh gallery after upload (reset to page 1)
       setCurrentPage(1);
       await fetchGalleryFiles(1);
@@ -207,14 +203,14 @@ export default function Media() {
   // Fungsi untuk handle confirm delete
   const handleConfirmDelete = async () => {
     if (!selectedFile) return;
-    
+
     setDeleting(true);
     try {
       await apiClient(`/files/notes_app/${selectedFile.id}`, "DELETE");
       setSuccess(`File "${selectedFile.name}" deleted successfully`);
       setDeleteModalOpen(false);
       setSelectedFile(null);
-      
+
       // Refresh gallery after delete
       const pageToFetch = currentPage;
       await fetchGalleryFiles(pageToFetch);
@@ -257,7 +253,7 @@ export default function Media() {
   const generatePageNumbers = () => {
     const pages = [];
     const maxVisiblePages = 5;
-    
+
     if (totalPages <= maxVisiblePages) {
       // Show all pages if total is less than max visible
       for (let i = 1; i <= totalPages; i++) {
@@ -267,12 +263,12 @@ export default function Media() {
       // Calculate start and end pages
       let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
       let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
-      
+
       // Adjust start page if we're near the end
       if (endPage - startPage + 1 < maxVisiblePages) {
         startPage = Math.max(1, endPage - maxVisiblePages + 1);
       }
-      
+
       // Add first page and ellipsis if needed
       if (startPage > 1) {
         pages.push(1);
@@ -280,12 +276,12 @@ export default function Media() {
           pages.push('...');
         }
       }
-      
+
       // Add visible pages
       for (let i = startPage; i <= endPage; i++) {
         pages.push(i);
       }
-      
+
       // Add ellipsis and last page if needed
       if (endPage < totalPages) {
         if (endPage < totalPages - 1) {
@@ -294,7 +290,7 @@ export default function Media() {
         pages.push(totalPages);
       }
     }
-    
+
     return pages;
   };
 
@@ -338,14 +334,14 @@ export default function Media() {
                 <p className="text-gray-400">Upload and manage your media files</p>
               </div>
             </div>
-            
+
             {/* Storage Info */}
             <div className="text-right">
               <div className="text-sm text-gray-300">
                 Storage: {formatFileSize(storageInfo.used)} / {formatFileSize(storageInfo.total)}
               </div>
               <div className="w-full h-2 bg-gray-600 rounded-full mt-1">
-                <div 
+                <div
                   className="h-2 bg-blue-500 rounded-full transition-all"
                   style={{ width: formatStoragePercentage(storageInfo.used, storageInfo.total) }}
                 ></div>
@@ -371,7 +367,7 @@ export default function Media() {
               accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt"
               className="hidden"
             />
-            
+
             <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
             <p className="text-gray-300 mb-2">Drag & drop files here or</p>
             <button
@@ -501,8 +497,42 @@ export default function Media() {
           </div>
 
           {loadingGallery ? (
-            <div className="flex justify-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+            <div className="flex flex-col items-center justify-center py-12">
+              {/* SVG Spinner - lebih reliable di production */}
+              <div className="relative">
+                <svg
+                  className="animate-spin h-8 w-8 text-blue-500"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  style={{ animation: 'spin 1s linear infinite' }}
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
+                </svg>
+              </div>
+              <p className="mt-3 text-gray-400 text-sm">Loading files...</p>
+
+              {/* Fallback CSS animation */}
+              <style>
+                {`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}
+              </style>
             </div>
           ) : galleryFiles.length === 0 ? (
             <div className="text-center py-12 text-gray-400">
@@ -647,11 +677,10 @@ export default function Media() {
                         ) : (
                           <button
                             onClick={() => handlePageChange(page as number)}
-                            className={`px-3 py-2 text-sm rounded-lg transition-colors ${
-                              currentPage === page
+                            className={`px-3 py-2 text-sm rounded-lg transition-colors ${currentPage === page
                                 ? 'bg-blue-600 text-white'
                                 : 'text-gray-300 bg-gray-700 hover:bg-gray-600'
-                            }`}
+                              }`}
                           >
                             {page}
                           </button>
@@ -689,7 +718,7 @@ export default function Media() {
                       <p className="text-gray-400 text-xs">{formatFileSize(file.size)}</p>
                     </div>
                   </div>
-                  
+
                   {file.type.startsWith('image/') && (
                     <img
                       src={file.url}
@@ -697,7 +726,7 @@ export default function Media() {
                       className="w-full h-32 object-cover rounded-lg mb-2"
                     />
                   )}
-                  
+
                   <div className="flex justify-between items-center">
                     <span className="text-gray-400 text-xs">
                       {new Date(file.uploadedAt).toLocaleDateString()}

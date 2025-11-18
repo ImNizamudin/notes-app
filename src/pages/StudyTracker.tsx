@@ -57,15 +57,15 @@ interface StudyTrackerData {
   status: string;
 }
 
-interface StudyTrackerResponse {
-  data: {
-    study_tracker: StudyTrackerData;
-  };
-  meta: {
-    message: string;
-    code: number;
-  };
-}
+// interface StudyTrackerResponse {
+//   data: {
+//     study_tracker: StudyTrackerData;
+//   };
+//   meta: {
+//     message: string;
+//     code: number;
+//   };
+// }
 
 // Modal Component
 interface SessionModalProps {
