@@ -538,8 +538,18 @@ function AddStudyModal({ isOpen, onClose, noteId }: AddStudyModalProps) {
         noteId
       );
 
+      const selectedStudyNames = selectedStudies.map(id => {
+        const study = studies.find(s => s.id === id);
+        return study ? study.name : `Study ID: ${id}`;
+      }).filter(Boolean);
+
+      // Show success alert with study names
+      alert(`Sukses berhasil menambahkan ${selectedStudies.length} study${selectedStudies.length !== 1 ? 'ies' : ''}:\n\n${selectedStudyNames.map(name => `• ${name}`).join('\n')}`);
+
       onClose();
       setSelectedStudies([]);
+
+      window.dispatchEvent(new CustomEvent('refreshStudyTracker'));
     } catch (error: any) {
       console.error("Error adding studies:", error);
       alert(error.response?.meta?.message || "Failed to add studies");
@@ -755,78 +765,6 @@ function AddStudyModal({ isOpen, onClose, noteId }: AddStudyModalProps) {
   );
 }
 
-// Delete Study Modal Component
-interface DeleteStudyModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onDelete: (studyId: number) => void;
-  studies: StudyTrackerBody[];
-}
-
-function DeleteStudyModal({ isOpen, onClose, studies }: DeleteStudyModalProps) {
-  const [selectedStudy, setSelectedStudy] = useState<number>(0);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (selectedStudy) {
-      onDelete(selectedStudy);
-      onClose();
-      setSelectedStudy(0);
-    }
-  };
-
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
-      <div className="bg-gray-800 rounded-xl w-full max-w-md">
-        <div className="p-6 border-b border-gray-700">
-          <h2 className="text-xl font-bold text-gray-100">Delete Study</h2>
-          <p className="text-gray-400 text-sm mt-1">Select a study to remove from your tracker</p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="p-6">
-          {/* Study Selection */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Select Study
-            </label>
-            <select
-              value={selectedStudy}
-              onChange={(e) => setSelectedStudy(Number(e.target.value))}
-              className="w-full bg-gray-700 border border-gray-600 text-gray-100 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              required
-            >
-              <option value={0}>Choose a study to delete...</option>
-              {studies.map((study) => (
-                <option key={study.id} value={study.id}>
-                  {study.name} ({study.sks} SKS)
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex space-x-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-3 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={!selectedStudy}
-              className="flex-1 px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              Delete Study
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
 
 export default function StudyTrackers() {
   const navigate = useNavigate();
@@ -859,6 +797,19 @@ export default function StudyTrackers() {
     if (noteId) {
       fetchStudyTracker(noteId);
     }
+
+    const handleRefresh = () => {
+      if (noteId) {
+        fetchStudyTracker(noteId);
+      }
+    };
+
+    window.addEventListener('refreshStudyTracker', handleRefresh);
+
+    return () => {
+      window.removeEventListener('refreshStudyTracker', handleRefresh);
+    };
+
   }, [noteId]);
 
   const fetchStudyTracker = async (noteId: string) => {
@@ -879,21 +830,22 @@ export default function StudyTrackers() {
   const handleGenerateStudyTracker = async (noteId: string) => {
     try {
       const response: StudyTrackerResponse = await apiClient("/study_trackers", "POST", undefined, {}, noteId.toString());
+      alert("Study tracker berhasil dibuat!");
+      await fetchStudyTracker(noteId)
     } catch (err) {
       setError(err.response?.meta?.message);
-      console.log(err)
+      alert(err.response?.meta?.message);
     }
   };
 
   const handleSubmitStudy = async (noteId: string) => {
     try {
       const response: StudyTrackerResponse = await apiClient("/study_trackers/submit", "PUT", undefined, {}, noteId.toString());
-      console.log('Submit Study clicked');
-      alert('Submit Study functionality to be implemented');
-      console.log(response);
+      alert("Study tracker berhasil disimpan!");
+      await fetchStudyTracker(noteId)
     } catch (err) {
       setError(err.response?.meta?.message || "Failed to submit study");
-      console.log(err);
+      alert(err.response?.meta?.message);
     }
   };
 
@@ -1104,7 +1056,10 @@ export default function StudyTrackers() {
   }
 
   const handleDeleteCourse = async (courseId: number) => {
-    if (!confirm("Are you sure you want to delete this course from your study tracker?")) {
+    const course = data?.body.find(c => c.id === courseId);
+    const courseName = course?.name || 'this course';
+
+    if (!confirm(`Apakah Anda yakin ingin menghapus "${courseName}" dari study tracker Anda?`)) {
       return;
     }
 
@@ -1121,10 +1076,10 @@ export default function StudyTrackers() {
         setData(updatedData);
       }
       
-      console.log('Deleted course:', courseId);
+      alert(`Sukses berhasil menghapus "${courseName}" dari study tracker!`);
     } catch (err: any) {
-      setError(err.response?.meta?.message || "Failed to delete course");
-      console.error('Error deleting course:', err);
+      setError(err.response?.meta?.message);
+      alert(err.response?.meta?.message);
     } finally {
       setDeletingCourseId(null);
     }
@@ -1543,11 +1498,6 @@ export default function StudyTrackers() {
         noteId={noteId}
       />
 
-      <DeleteStudyModal
-        isOpen={showDeleteStudyModal}
-        onClose={() => setShowDeleteStudyModal(false)}
-        studies={data?.body || []}
-      />
     </div>
   );
 }
