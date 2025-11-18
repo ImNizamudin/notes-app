@@ -444,7 +444,7 @@ const fetchStudies = async (search: string = "", page: number = 1) => {
     const response: StudiesResponse = await apiClient(`/studies?${params}`, "GET");
 
     // set state sesuai struktur tipe yang kamu kasih
-    setStudies(response.data.studies || []);
+    setStudies(response.studies || []);
     setTotalPages(response.page.total_page);
     setCurrentPage(response.page.current_page);
 
@@ -1012,67 +1012,81 @@ export default function StudyTrackers() {
 
   }, [noteId]);
 
-const fetchStudyTracker = async (noteId: string) => {
-  try {
-    setLoading(true);
-    setError(null);
-    const response = await apiClient("/study_trackers", "GET", undefined, {}, noteId.toString());
-    
-    console.log("Study Tracker API Response:", response); // ✅ DEBUG LOG
-    
-    // ✅ PERBAIKI: Handle berbagai kemungkinan struktur response
-    if (response?.data?.study_tracker) {
-      setData(response.data.study_tracker);
-    } else if (response?.study_tracker) {
-      // Jika response langsung memiliki study_tracker (tanpa data wrapper)
-      setData(response.study_tracker);
-    } else if (response) {
-      // Jika response adalah data langsung
-      setData(response);
-    } else {
-      throw new Error("Invalid response structure");
+  const fetchStudyTracker = async (noteId: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await apiClient("/study_trackers", "GET", undefined, {}, noteId.toString());
+      
+      console.log("Study Tracker API Response:", response); // ✅ DEBUG LOG
+      
+      // ✅ PERBAIKI: Handle berbagai kemungkinan struktur response
+      if (response?.data?.study_tracker) {
+        setData(response.data.study_tracker);
+      } else if (response?.study_tracker) {
+        // Jika response langsung memiliki study_tracker (tanpa data wrapper)
+        setData(response.study_tracker);
+      } else if (response) {
+        // Jika response adalah data langsung
+        setData(response);
+      } else {
+        throw new Error("Invalid response structure");
+      }
+      
+    } catch (err: any) {
+      console.error("Error fetching study tracker:", err);
+      setError(err.response?.meta?.message || err.message || "Failed to load study tracker data");
+    } finally {
+      setLoading(false);
     }
-    
-  } catch (err: any) {
-    console.error("Error fetching study tracker:", err);
-    setError(err.response?.meta?.message || err.message || "Failed to load study tracker data");
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   // Action Handlers
- const handleGenerateStudyTracker = async (noteId: string) => {
-  try {
-    // ✅ HAPUS 'const response = ' karena tidak digunakan
-    await apiClient("/study_trackers", "POST", undefined, {}, noteId.toString());
-    alert("Study tracker berhasil dibuat!");
-    await fetchStudyTracker(noteId);
-  } catch (err: any) { // ✅ TAMBAHKIN ': any' atau gunakan type guard
-    console.error("Error generating study tracker:", err);
-    
-    // ✅ PERBAIKI error handling
-    const errorMessage = err.response?.meta?.message || "Failed to generate study tracker";
-    setError(errorMessage);
-    alert(errorMessage);
-  }
-};
+  const handleGenerateStudyTracker = async (noteId: string) => {
+    try {
+      // ✅ HAPUS 'const response = ' karena tidak digunakan
+      await apiClient("/study_trackers", "POST", undefined, {}, noteId.toString());
+      alert("Study tracker berhasil dibuat!");
+      await fetchStudyTracker(noteId);
+    } catch (err: any) { // ✅ TAMBAHKIN ': any' atau gunakan type guard
+      console.error("Error generating study tracker:", err);
+      
+      // ✅ PERBAIKI error handling
+      const errorMessage = err.response?.meta?.message || "Failed to generate study tracker";
+      setError(errorMessage);
+      alert(errorMessage);
+    }
+  };
 
-const handleSubmitStudy = async (noteId: string) => {
-  try {
-    // ✅ HAPUS 'const response = ' karena tidak digunakan
-    await apiClient("/study_trackers/submit", "PUT", undefined, {}, noteId.toString());
-    alert("Study tracker berhasil disimpan!");
-    await fetchStudyTracker(noteId);
-  } catch (err: any) { // ✅ TAMBAHKIN ': any' untuk akses property response
-    console.error("Error submitting study:", err);
-    
-    // ✅ PERBAIKI error handling
-    const errorMessage = err.response?.meta?.message || "Failed to submit study";
-    setError(errorMessage);
-    alert(errorMessage);
-  }
-};
+  const handleSubmitStudy = async (noteId: string) => {
+    // Konfirmasi sebelum submit
+    const isConfirmed = window.confirm(
+      "Apakah Anda yakin ingin menyimpan Study Tracker?\n\n" +
+      "Setelah disubmit, Anda tidak dapat:\n" +
+      "• Menambahkan mata kuliah baru\n" +
+      "• Menghapus mata kuliah yang ada\n\n" +
+      "Tindakan ini tidak dapat dibatalkan."
+    );
+
+    if (!isConfirmed) {
+      return; // Batalkan jika user tidak confirm
+    }
+
+    try {
+      await apiClient("/study_trackers/submit", "PUT", undefined, {}, noteId.toString());
+      
+      // Alert success
+      alert("✅ Study tracker berhasil disimpan!\n\nSekarang Anda tidak dapat menambahkan atau menghapus mata kuliah.");
+      
+      await fetchStudyTracker(noteId);
+    } catch (err: any) {
+      console.error("Error submitting study:", err);
+      
+      const errorMessage = err.response?.meta?.message || "Failed to submit study";
+      setError(errorMessage);
+      alert(`❌ Gagal menyimpan study tracker:\n${errorMessage}`);
+    }
+  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("id-ID", {
