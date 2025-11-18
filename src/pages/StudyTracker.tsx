@@ -437,22 +437,24 @@ const fetchStudies = async (search: string = "", page: number = 1) => {
     const params = new URLSearchParams({
       limit: "10",
       page: page.toString(),
-      ...(search && { search })
+      ...(search ? { search } : {})
     });
 
+    // fetch data
     const response: StudiesResponse = await apiClient(`/studies?${params}`, "GET");
-    console.log(response);
-    
-    // ✅ PERBAIKI: Gunakan response.data.studies bukan response.studies
+
+    // set state sesuai struktur tipe yang kamu kasih
     setStudies(response.data.studies || []);
     setTotalPages(response.page.total_page);
     setCurrentPage(response.page.current_page);
+
   } catch (error: any) {
     console.error("Error fetching studies:", error);
   } finally {
     setSearchLoading(false);
   }
 };
+
 
   // Debounce search
   useEffect(() => {
@@ -835,7 +837,8 @@ function WebinarModal({ isOpen, onClose, webinar, courseName, webinarNumber, onS
       // Prepare the payload
       const payload = {
         is_presented: formData.present,
-        score: formData.score ? parseInt(formData.score) : 0
+        score: formData.score != null ? Number(formData.score) : null
+        // score: formData.score ? parseInt(formData.score) : 0
       };
 
       console.log('API Parameters:', {
@@ -857,7 +860,9 @@ function WebinarModal({ isOpen, onClose, webinar, courseName, webinarNumber, onS
       const webinarData: Partial<Webinar> = {
         webinar_number: webinarNumber,
         present_at: formData.present ? new Date().toISOString() : null,
-        score: formData.score ? parseInt(formData.score) : null
+        // score: formData.score ? parseInt(formData.score) : null
+        score: formData.score != null ? Number(formData.score) : null
+
       };
 
       onSave(webinarData);
@@ -1370,7 +1375,7 @@ const handleSubmitStudy = async (noteId: string) => {
     }
 
     try {
-      const response: StudyTrackerResponse = await apiClient("/study_trackers/finalize", "PUT", undefined, {}, noteId.toString());
+      await apiClient("/study_trackers/finalize", "PUT", undefined, {}, noteId.toString());
       alert("Study tracker berhasil difinalisasi!");
       await fetchStudyTracker(noteId);
     } catch (err: any) {
