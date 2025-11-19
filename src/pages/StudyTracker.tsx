@@ -1444,14 +1444,14 @@ export default function StudyTrackers() {
             <Database className="w-5 h-5" />
             <span className="text-sm">Manage your study tracker</span>
           </div>
-          {data.status === "submitted" && (
-            <div className="px-3 py-1 bg-green-900/50 border border-green-700 text-green-300 text-sm rounded-lg">
-              Study Tracker Submitted
-            </div>
-          )}
-          {data.status !== "submitted" && (
-            <div className="flex items-center space-x-3">
-              {/* Generate Study Tracker Button */}
+          <div className="flex items-center space-x-3 justify-center">
+            {data.status === "submitted" && (
+              <div className="px-3 py-1 bg-green-900/50 border border-green-700 text-green-300 text-sm rounded-lg">
+                Study Tracker Submitted
+              </div>
+            )}
+            {/* Generate Study Tracker Button */}
+            {data.body.length < 1 && (
               <button
                 onClick={() => handleGenerateStudyTracker(noteId)}
                 className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-500 transition-colors"
@@ -1459,25 +1459,29 @@ export default function StudyTrackers() {
                 <PlusCircle className="w-4 h-4" />
                 <span>Generate Study Tracker</span>
               </button>
-
-              {/* Add Study Button */}
-              <button
-                onClick={() => setShowAddStudyModal(true)}
-                className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-500 transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Add Study</span>
-              </button>
-
-              {/* Submit Study Button */}
-              <button
-                onClick={() => handleSubmitStudy(noteId)}
-                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition-colors"
-              >
-                <Send className="w-4 h-4" />
-                <span>Submit Study</span>
-              </button>
-
+            )}
+            {data.status !== "submitted" && (
+              <div className="flex items-center space-x-3">
+                {/* Add Study Button */}
+                <button
+                  onClick={() => setShowAddStudyModal(true)}
+                  className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-500 transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Add Study</span>
+                </button>
+                
+                {/* Submit Study Button */}
+                <button
+                  onClick={() => handleSubmitStudy(noteId)}
+                  className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition-colors"
+                >
+                  <Send className="w-4 h-4" />
+                  <span>Submit Study</span>
+                </button>
+              </div>
+            )}
+            {data.status == "submitted" && (
               <button
                 onClick={() => handleFinalize(noteId)}
                 className="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-500 transition-colors"
@@ -1485,8 +1489,8 @@ export default function StudyTrackers() {
                 <Zap className="w-4 h-4" />
                 <span>Finalize</span>
               </button>
-            </div>
-          )}
+            )}
+          </div>
           
         </div>
 
