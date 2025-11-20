@@ -14,6 +14,7 @@ export interface Note {
     username: string;
     fullname: string;
     email: string;
+    can_kick: boolean;
   }
   [k: string]: any;
   visibility?: string;

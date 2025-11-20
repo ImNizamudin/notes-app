@@ -34,8 +34,6 @@ export default function CollaboratorInput({ noteId }: CollaboratorInputProps) {
     fetchCollaborators(noteId);
   }, [noteId, fetchCollaborators]);
 
-  console.log("Collaborators:", collaborators);
-
   // Clear success message setelah 3 detik
   useEffect(() => {
     if (successMessage) {
@@ -123,8 +121,7 @@ export default function CollaboratorInput({ noteId }: CollaboratorInputProps) {
       setSuccessMessage(`✅ Successfully removed ${username} from collaborators!`);
       fetchCollaborators(noteId);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      alert(`Failed to remove collaborator: ${errorMessage}`);
+      alert(`Failed to remove collaborator: ${error?.response?.meta?.message || 'error'}`);
     }
   };
 

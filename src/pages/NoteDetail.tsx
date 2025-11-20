@@ -5,14 +5,11 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { 
   Edit3, Trash2, ArrowLeft, Tag, FileText, Users, Lock, Globe, 
   MessageCircle, Send, X, 
-  // Type, 
   ImageIcon, Eye,
-  //  Plus,
     RefreshCw, 
   Upload, AlertCircle, CheckCircle, ChevronLeft, ChevronRight, 
   Clock, ImageOff, 
-  // Menu, EllipsisVertical, Trash, 
-  Copy, Check 
+  Copy, Check, Info 
 } from "lucide-react";
 import DOMPurify from "dompurify";
 import hljs from "highlight.js";
@@ -132,6 +129,9 @@ function NoteDetail() {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadSuccess, setUploadSuccess] = useState<string | null>(null);
 
+  // Tambahkan state ini di bagian state lainnya
+  const [commentError, setCommentError] = useState<string | null>(null);
+
   // burger action note
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -169,16 +169,7 @@ function NoteDetail() {
     }
   };
 
-  // Load comments when page changes
-  const loadComments = async (page: number) => {
-    if (!id) return;
-    try {
-      await fetchCollaborations(parseInt(id), page, commentsPerPage);
-    } catch (error: any) {
-      setErr(error.response.meta.message);
-    }
-  };
-
+  
   useEffect(() => {
     if (!id) {
       setErr("Note ID is required");
@@ -187,7 +178,7 @@ function NoteDetail() {
     }
     loadData();
   }, [id, fetchNoteById, currentPage]);
-
+  
   const onDelete = async () => {
     if (!id) return;
     if (!confirm("Are you sure you want to delete this note?")) return;
@@ -200,10 +191,22 @@ function NoteDetail() {
       setDeleting(false);
     }
   };
+  
+  // Load comments when page changes
+  const loadComments = async (page: number) => {
+    if (!id) return;
+    try {
+      setCommentError(null);
+      await fetchCollaborations(parseInt(id), page, commentsPerPage);
+    } catch (error: any) {
+      setCommentError(error.message || "Failed to load comments");
+    }
+  };
 
   const handleAddComment = async () => {
     if (!id || !body.trim()) return;
     try {
+      setCommentError(null);
       await addOrUpdateComment(parseInt(id), body, thumbnail ?? undefined);
       setBody("");
       setThumbnail(null);
@@ -211,7 +214,8 @@ function NoteDetail() {
       setCurrentPage(1);
       await loadComments(1);
     } catch (error: any) {
-      setErr(error.message);
+      console.log(error)
+      setCommentError(error.message || "Failed to add comment");
     }
   };
 
@@ -219,7 +223,7 @@ function NoteDetail() {
     if (!editCommentText.trim() || !editingCommentId) return;
     if (!id) return;
 
-    setErr(null);
+    setCommentError(null);
 
     try {
       await addOrUpdateComment(
@@ -236,13 +240,14 @@ function NoteDetail() {
       await loadComments(currentPage);
     } catch (error: any) {
       console.error("Edit comment error:", error);
-      setErr(error.message || "Failed to edit comment");
+      setCommentError(error.message || "Failed to edit comment");
     }
   };
 
   const handleDeleteComment = async (collabId: string, noteId: number) => {
     if (!confirm("Apakah Anda yakin ingin menghapus catatan harian ini?")) return;
     try {
+      setCommentError(null);
       await deleteComment(collabId, noteId);
       // Reload current page, or go to previous page if current page becomes empty
       const remainingComments = comments.length - 1;
@@ -254,7 +259,7 @@ function NoteDetail() {
       }
       await loadComments(targetPage);
     } catch (error: any) {
-      setErr(error.response.meta.message);
+      setCommentError(error.message || "Failed to delete comment");
     }
   };
 
@@ -513,6 +518,46 @@ function NoteDetail() {
   // Check permissions for note
   const canEditNote = note?.is_editable === true;
   const canDeleteNote = note?.is_deletable === true;
+
+  const handleLeaveCollaboration = async (noteId: number) => {
+    if (!confirm("Apakah Anda yakin ingin keluar dari kolaborasi note ini?")) {
+      return;
+    }
+
+    try {
+      await apiClient("/collaborations/leave", "DELETE", {
+        noteId: noteId
+      });
+
+      alert("Berhasil keluar dari kolaborasi!");
+      // Refresh data atau redirect ke halaman notes
+      navigate("/");
+    } catch (error: any) {
+      console.error("Error leaving collaboration:", error);
+      alert(error.response?.meta?.message || "Gagal keluar dari kolaborasi");
+    }
+  };
+
+  const handleKickCollaborator = async (noteId: number, userId: number, username: string) => {
+    if (!confirm(`Apakah Anda yakin ingin mengeluarkan ${username} dari kolaborasi?`)) {
+      return;
+    }
+
+    try {
+      await apiClient("/collaborations", "DELETE", {
+        noteId: noteId,
+        userId: userId.toString()
+      });
+
+      alert(`Berhasil mengeluarkan ${username} dari kolaborasi!`);
+      // Refresh data notes
+      loadData();
+      setShowCollaborationModal(false);
+    } catch (error: any) {
+      console.error("Error kicking collaborator:", error);
+      alert(error.response?.meta?.message || "Gagal mengeluarkan collaborator");
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-900">
@@ -902,6 +947,23 @@ function NoteDetail() {
                       )}
                     </button>
                   </div>
+
+                  {/* Error Message untuk Komentar */}
+                  {commentError && (
+                    <div className="mt-4 p-2 bg-red-900/50 border border-red-700 rounded-lg relative">
+                      <div className="flex items-start space-x-2">
+                        <AlertCircle className="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0" />
+                        <p className="text-red-200 text-sm flex-1">{commentError}</p>
+                        <button
+                          onClick={() => setCommentError(null)}
+                          className="text-red-400 hover:text-red-300 transition-colors bg-transparent p-1 rounded-full"
+                          title="Close error message"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Comments List */}
@@ -1309,14 +1371,14 @@ function NoteDetail() {
       )}
 
       {/* Collaboration Modal */}
-      {showCollaborationModal && (
+      {showCollaborationModal && note && (
         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
           <div className="bg-gray-800 rounded-xl w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
             <div className="p-6 border-b border-gray-700 flex justify-between items-center">
               <div>
                 <h2 className="text-xl font-bold text-gray-100">Collaborators</h2>
                 <p className="text-gray-400 text-sm mt-1">
-                  Note visibility: <span className="capitalize">{note?.visibility}</span>
+                  Note: {note.title}
                 </p>
               </div>
               <button
@@ -1334,14 +1396,14 @@ function NoteDetail() {
                 <div className="flex items-center justify-between bg-gray-700 p-4 rounded-lg">
                   <div className="flex items-center space-x-3">
                     <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-lg">
-                      {getInitials(note?.user_owner?.username || "")}
+                      {getInitials(note.user_owner?.username || "")}
                     </div>
                     <div>
                       <p className="text-gray-100 font-medium text-lg">
-                        {note?.user_owner?.username || note?.username || 'Unknown user'}
+                        {note.user_owner?.username || 'Unknown user'}
                       </p>
                       <p className="text-gray-400 text-sm">
-                        {note?.user_owner?.email || 'No email'}
+                        {note.user_owner?.user_fullname || 'No full name'}
                       </p>
                     </div>
                   </div>
@@ -1355,36 +1417,63 @@ function NoteDetail() {
               <div className="mb-6">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-medium text-gray-300">
-                    Collaborators ({Array.isArray(note?.user_collaborators) ? note?.user_collaborators.length : 0})
+                    Collaborators ({Array.isArray(note.user_collaborators) ? note.user_collaborators.length : 0})
                   </h3>
                 </div>
                 
-                {Array.isArray(note?.user_collaborators) && note?.user_collaborators.length > 0 ? (
+                {Array.isArray(note.user_collaborators) && note.user_collaborators.length > 0 ? (
                   <div className="space-y-3">
-                    {note?.user_collaborators.map((collaborator: any, index: number) => (
+                    {note.user_collaborators.map((collaborator: any, index: number) => (
                       <div key={collaborator.id || index} className="flex items-center justify-between bg-gray-700 p-4 rounded-lg">
                         <div className="flex items-center space-x-3">
                           <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-blue-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
-                            {getInitials(collaborator.username || collaborator.email || 'U')}
+                            {getInitials(collaborator.username || collaborator.user_fullname || 'U')}
                           </div>
                           <div>
                             <p className="text-gray-100 font-medium">
-                              {collaborator.username || collaborator.email || 'Unknown User'}
+                              {collaborator.username || 'Unknown User'}
                             </p>
                             <p className="text-gray-400 text-sm">
-                              {collaborator.email || 'No email'}
+                              {collaborator.user_fullname || 'No full name'}
                             </p>
                           </div>
                         </div>
                         
-                        {/* Role Badge */}
-                        <span className={`px-3 py-1 text-sm rounded-full ${
-                          collaborator.role === 'admin' 
-                            ? 'bg-purple-900/50 text-purple-300 border border-purple-700'
-                            : 'bg-green-900/50 text-green-300 border border-green-700'
-                        }`}>
-                          {collaborator.role || 'collaborator'}
-                        </span>
+                        <div className="flex items-center space-x-3">
+                          {/* Role Badge */}
+                          <span className={`px-3 py-1 text-sm rounded-full ${
+                            collaborator.is_owner 
+                              ? 'bg-purple-900/50 text-purple-300 border border-purple-700'
+                              : 'bg-green-900/50 text-green-300 border border-green-700'
+                          }`}>
+                            {collaborator.is_owner ? 'Owner' : 'Collaborator'}
+                          </span>
+
+                          {/* Action Buttons */}
+                          <div className="flex items-center space-x-2">
+                            {/* Leave Button - hanya untuk collaborator yang can_leave dan bukan owner */}
+                            {!collaborator.is_owner && collaborator.can_leave && (
+                              <button
+                                onClick={() => handleLeaveCollaboration(note.id)}
+                                className="px-3 py-1 bg-red-600 text-white rounded-lg hover:bg-red-500 transition-colors text-sm"
+                                title="Leave collaboration"
+                              >
+                                Leave
+                              </button>
+                            )}
+
+                            {/* Kick Button - hanya untuk owner yang can_kick dan bukan diri sendiri */}
+                            {note.is_deletable && !collaborator.is_owner && (
+                              <button
+                                onClick={() => handleKickCollaborator(note.id, collaborator.user_id, collaborator.username)}
+                                className="px-3 py-1 bg-orange-600 text-white rounded-lg hover:bg-orange-500 transition-colors text-sm"
+                                title="Kick collaborator"
+                              >
+                                Kick
+                              </button>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -1392,37 +1481,35 @@ function NoteDetail() {
                   <div className="text-center py-8 text-gray-400 bg-gray-700/50 rounded-lg">
                     <Users className="w-16 h-16 mx-auto mb-3 opacity-50" />
                     <p className="text-lg">No collaborators</p>
-                    <p className="text-sm mt-1">
-                      {note?.visibility === 'private' 
-                        ? 'This note is private and has no collaborators.'
-                        : 'No collaborators have been added to this note yet.'
-                      }
-                    </p>
+                    <p className="text-sm mt-1">No collaborators have been added to this note yet.</p>
                   </div>
                 )}
               </div>
 
-              {/* Info untuk private visibility */}
-              {note?.visibility === 'private' && (
-                <div className="border-t border-gray-700 pt-6">
-                  <div className="bg-blue-900/20 border border-blue-700 rounded-lg p-4">
-                    <div className="flex items-start space-x-3">
-                      <Lock className="w-5 h-5 text-blue-400 mt-0.5" />
-                      <div>
-                        <h4 className="text-blue-300 font-medium mb-1">Private Note</h4>
-                        <p className="text-blue-200 text-sm">
-                          This note is private and can only be accessed by the owner.
-                        </p>
-                      </div>
+              {/* Info untuk user current */}
+              <div className="border-t border-gray-700 pt-6">
+                <div className="bg-blue-900/20 border border-blue-700 rounded-lg p-4">
+                  <div className="flex items-start space-x-3">
+                    <Info className="w-5 h-5 text-blue-400 mt-0.5" />
+                    <div>
+                      <h4 className="text-blue-300 font-medium mb-1">Collaboration Info</h4>
+                      <p className="text-blue-200 text-sm">
+                        {note.user_owner?.can_kick 
+                          ? "As the owner, you can remove collaborators from this note."
+                          : note.user_collaborators?.some((collab: any) => collab.can_leave && !collab.is_owner)
+                          ? "You can leave this collaboration if you no longer wish to collaborate on this note."
+                          : "You are the owner of this note or cannot leave this collaboration."
+                        }
+                      </p>
                     </div>
                   </div>
                 </div>
-              )}
+              </div>
             </div>
 
             <div className="p-6 border-t border-gray-700 flex justify-between items-center">
               <div className="text-gray-400 text-sm">
-                Total: {1 + (Array.isArray(note?.user_collaborators) ? note?.user_collaborators.length : 0)} people
+                Total: {1 + (Array.isArray(note.user_collaborators) ? note.user_collaborators.length : 0)} people
               </div>
               <button
                 onClick={() => setShowCollaborationModal(false)}
@@ -1433,7 +1520,7 @@ function NoteDetail() {
             </div>
           </div>
         </div>
-      )}
+    )}
 
       {/* Image View Modal */}
       <ImageViewModal
