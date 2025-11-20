@@ -1498,7 +1498,7 @@ function NoteDetail() {
                           ? "Sebagai pemilik, Anda dapat menghapus kolaborator dari catatan ini."
                           : note.user_collaborators?.some((collab: any) => collab.can_leave && !collab.is_owner)
                           ? "Anda dapat meninggalkan kolaborasi ini jika Anda tidak lagi ingin berkolaborasi pada catatan ini"
-                          : "Anda adalah pemilik catatan ini atau tidak dapat meninggalkan kolaborasi ini."
+                          : "Anda tidak dapat meninggalkan kolaborasi ini karena Anda adalah pemilik catatan atau sedang menjalankan study tracker."
                         }
                       </p>
                     </div>
