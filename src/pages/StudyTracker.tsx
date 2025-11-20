@@ -427,13 +427,12 @@ function AddStudyModal({ isOpen, onClose, noteId }: AddStudyModalProps) {
     setSearchLoading(true);
     try {
       const params = new URLSearchParams({
-        limit: "50",
+        limit: "100",
         page: page.toString(),
         ...(search ? { search } : {})
       });
 
       const response = await apiClient(`/studies?${params}`, "GET");
-      
 
       // Perbaikan: Sesuaikan dengan struktur response yang sebenarnya
       let studiesData = [];
@@ -458,8 +457,7 @@ function AddStudyModal({ isOpen, onClose, noteId }: AddStudyModalProps) {
       }
 
     } catch (error: any) {
-      console.error("Error fetching studies:", error);
-      console.error("Error details:", error.response?.data?.message); // Debug log
+      console.error("Error fetching studies:", error.response?.data?.message);
     } finally {
       setSearchLoading(false);
     }
@@ -467,39 +465,37 @@ function AddStudyModal({ isOpen, onClose, noteId }: AddStudyModalProps) {
 
   // Update allSelectedStudies ketika selectedStudies berubah
   useEffect(() => {
-    const fetchSelectedStudiesDetails = async () => {
-      if (selectedStudies.length === 0) {
-        setAllSelectedStudies([]);
-        return;
-      }
+    if (selectedStudies.length === 0) {
+      setAllSelectedStudies([]);
+      return;
+    }
 
-      try {
-        // Ambil detail studi yang dipilih dari API atau dari studies yang sudah ada
-        const selectedDetails = selectedStudies.map(id => {
-          // Cari di studies yang sudah di-fetch
-          const existingStudy = studies.find(s => s.id === id);
-          if (existingStudy) return existingStudy;
-
-          // Jika tidak ditemukan, buat object sementara
-          return {
-            id,
-            name: `Loading...`,
-            sks: 0,
-            semester: 0,
-            is_practical: false,
-            study_field_id: 0,
-            created_at: '',
-            updated_at: ''
-          };
-        }).filter(Boolean);
-
-        setAllSelectedStudies(selectedDetails);
-      } catch (error) {
-        console.error("Error fetching selected studies details:", error);
-      }
-    };
-
-    fetchSelectedStudiesDetails();
+    // Selalu pertahankan allSelectedStudies yang ada, hanya update jika ada studi baru yang ditemukan
+    setAllSelectedStudies(prev => {
+      const updatedStudies = selectedStudies.map(id => {
+        // Cari di studies yang baru
+        const newStudy = studies.find(s => s.id === id);
+        if (newStudy) return newStudy;
+        
+        // Cari di allSelectedStudies yang sudah ada
+        const existingStudy = prev.find(s => s.id === id);
+        if (existingStudy) return existingStudy;
+        
+        // Fallback
+        return {
+          id,
+          name: `Study ${id}`,
+          sks: 0,
+          semester: 0,
+          is_practical: false,
+          study_field_id: 0,
+          created_at: '',
+          updated_at: ''
+        };
+      });
+      
+      return updatedStudies;
+    });
   }, [selectedStudies, studies]);
 
   // Debounce search
@@ -527,23 +523,13 @@ function AddStudyModal({ isOpen, onClose, noteId }: AddStudyModalProps) {
         ...(searchTerm && { search: searchTerm })
       });
 
-      console.log('Loading more studies with params:', params.toString()); // Debug log
-
       const response = await apiClient(`/studies?${params}`, "GET");
-      
-      console.log('Load more response:', response); // Debug log
 
       // Extract studies data dengan cara yang sama
       let studiesData = [];
       
-      if (response.data && Array.isArray(response.data.studies)) {
-        studiesData = response.data.studies;
-      } else if (Array.isArray(response.studies)) {
+      if (response.studies) {
         studiesData = response.studies;
-      } else if (Array.isArray(response.data)) {
-        studiesData = response.data;
-      } else if (Array.isArray(response)) {
-        studiesData = response;
       }
 
       setStudies(prev => [...prev, ...studiesData]);
@@ -554,7 +540,7 @@ function AddStudyModal({ isOpen, onClose, noteId }: AddStudyModalProps) {
         setCurrentPage(response.page.current_page || 1);
       }
     } catch (error: any) {
-      console.error("Error loading more studies:", error);
+      console.error("Error fetching studies:", error.response?.data?.message);
     } finally {
       setSearchLoading(false);
     }

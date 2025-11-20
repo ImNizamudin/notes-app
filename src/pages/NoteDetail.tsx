@@ -519,7 +519,7 @@ function NoteDetail() {
   const canEditNote = note?.is_editable === true;
   const canDeleteNote = note?.is_deletable === true;
 
-  const handleLeaveCollaboration = async (noteId: number) => {
+  const handleLeaveCollaboration = async (noteId: any) => {
     if (!confirm("Apakah Anda yakin ingin keluar dari kolaborasi note ini?")) {
       return;
     }
@@ -538,7 +538,7 @@ function NoteDetail() {
     }
   };
 
-  const handleKickCollaborator = async (noteId: number, userId: number, username: string) => {
+  const handleKickCollaborator = async (noteId:any, userId: number, username: string) => {
     if (!confirm(`Apakah Anda yakin ingin mengeluarkan ${username} dari kolaborasi?`)) {
       return;
     }
@@ -1400,10 +1400,10 @@ function NoteDetail() {
                     </div>
                     <div>
                       <p className="text-gray-100 font-medium text-lg">
-                        {note.user_owner?.username || 'Unknown user'}
+                        {note.user_owner?.username}
                       </p>
                       <p className="text-gray-400 text-sm">
-                        {note.user_owner?.user_fullname || 'No full name'}
+                        {note.user_owner?.user_fullname}
                       </p>
                     </div>
                   </div>
