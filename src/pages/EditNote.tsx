@@ -289,8 +289,8 @@ function EditNote() {
         setTitle(local.title);
         setBody(local.body);
         setTagsInput(local.tags.join(", "));
-        setType(local?.type || "daily_note");
-        setVisibility(local?.visibility || "collaboration");
+        setType((local?.type as "tracker" | "daily_note") || "daily_note");
+        setVisibility((local?.visibility as "private" | "public" | "collaboration") || "collaboration");
         setThumbnail(local.thumbnail || null);
         setLoading(false);
       } else {
@@ -300,8 +300,8 @@ function EditNote() {
           setTitle(data.title);
           setBody(data.body);
           setTagsInput(data.tags?.join(", ") || "");
-          setType(data.type || "daily_note");
-          setVisibility(data.visibility || "collaboration");
+          setType((data?.type as "tracker" | "daily_note") || "daily_note");
+          setVisibility((data?.visibility as "private" | "public" | "collaboration") || "collaboration");
           setThumbnail(data.thumbnail || null);
         } catch (e: any) {
           setErr(e.message || "Gagal memuat note");

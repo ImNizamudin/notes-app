@@ -31,12 +31,6 @@ function WhatsAppInfoModal({ isOpen, onClose, onContinue }: WhatsAppInfoModalPro
         </div>
 
         <div className="p-6">
-          <div className="bg-blue-900/20 border border-blue-700 rounded-lg p-4 mb-4">
-            <p className="text-blue-300 text-sm">
-              Sebelum melakukan integrasi WhatsApp BOT, pastikan Anda sudah:
-            </p>
-          </div>
-
           <div className="space-y-3 mb-6">
             <div className="flex items-start space-x-3">
               <div className="flex-shrink-0 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center mt-0.5">

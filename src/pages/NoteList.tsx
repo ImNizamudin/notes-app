@@ -200,7 +200,7 @@ function NoteList() {
                                     updated_at: note.updatedAt,
                                     total_daily_notes: note.total_daily_notes ?? 0,
                                     total_daily_notes_mine: note.total_daily_notes_mine ?? 0,
-                                    type: note.type,
+                                    type: note.type as "tracker" | "daily_note",
                                 }}
                             />
                         ))}

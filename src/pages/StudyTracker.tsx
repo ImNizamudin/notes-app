@@ -405,22 +405,6 @@ interface Study {
   updated_at: string;
 }
 
-interface StudiesResponse {
-  data: {
-    studies: Study[];
-  };
-  page: {
-    current_page: number;
-    total_data: number;
-    limit: number;
-    total_page: number;
-  };
-  meta: {
-    message: string;
-    code: number;
-  };
-}
-
 interface AddStudyModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -449,20 +433,33 @@ function AddStudyModal({ isOpen, onClose, noteId }: AddStudyModalProps) {
       });
 
       const response = await apiClient(`/studies?${params}`, "GET");
+      
+
+      // Perbaikan: Sesuaikan dengan struktur response yang sebenarnya
+      let studiesData = [];
+      
+      // Cek beberapa kemungkinan struktur response
+      if (response.studies) {
+        studiesData = response.studies;
+      }
 
       // Jika page 1 (search baru atau load pertama), replace studies
       // Jika load more, append ke studies yang ada
       if (page === 1) {
-        setStudies(response.studies || []);
+        setStudies(studiesData);
       } else {
-        setStudies(prev => [...prev, ...(response.studies || [])]);
+        setStudies(prev => [...prev, ...studiesData]);
       }
       
-      setTotalPages(response.page.total_page);
-      setCurrentPage(response.page.current_page);
+      // Update pagination info
+      if (response.page) {
+        setTotalPages(response.page.total_page || 1);
+        setCurrentPage(response.page.current_page || 1);
+      }
 
     } catch (error: any) {
       console.error("Error fetching studies:", error);
+      console.error("Error details:", error.response?.data?.message); // Debug log
     } finally {
       setSearchLoading(false);
     }
@@ -505,16 +502,17 @@ function AddStudyModal({ isOpen, onClose, noteId }: AddStudyModalProps) {
     fetchSelectedStudiesDetails();
   }, [selectedStudies, studies]);
 
-  // Load studies pertama kali modal dibuka
+  // Debounce search
   useEffect(() => {
-    if (isOpen) {
-      fetchStudies();
-      setSelectedStudies([]);
-      setAllSelectedStudies([]);
-      setSearchTerm("");
-      setCurrentPage(1);
-    }
-  }, [isOpen]);
+    const timeoutId = setTimeout(() => {
+      if (isOpen) {
+        setCurrentPage(1);
+        fetchStudies(searchTerm, 1);
+      }
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchTerm, isOpen]);
 
   // Load more studies
   const loadMoreStudies = async () => {
@@ -524,15 +522,37 @@ function AddStudyModal({ isOpen, onClose, noteId }: AddStudyModalProps) {
     setSearchLoading(true);
     try {
       const params = new URLSearchParams({
-        limit: "10",
+        limit: "50", // Ubah dari 10 ke 50 untuk konsistensi
         page: nextPage.toString(),
         ...(searchTerm && { search: searchTerm })
       });
 
-      const response: StudiesResponse = await apiClient(`/studies?${params}`, "GET");
-      setStudies(prev => [...prev, ...(response.data.studies || [])]);
-      setTotalPages(response.page.total_page);
-      setCurrentPage(response.page.current_page);
+      console.log('Loading more studies with params:', params.toString()); // Debug log
+
+      const response = await apiClient(`/studies?${params}`, "GET");
+      
+      console.log('Load more response:', response); // Debug log
+
+      // Extract studies data dengan cara yang sama
+      let studiesData = [];
+      
+      if (response.data && Array.isArray(response.data.studies)) {
+        studiesData = response.data.studies;
+      } else if (Array.isArray(response.studies)) {
+        studiesData = response.studies;
+      } else if (Array.isArray(response.data)) {
+        studiesData = response.data;
+      } else if (Array.isArray(response)) {
+        studiesData = response;
+      }
+
+      setStudies(prev => [...prev, ...studiesData]);
+      
+      // Update pagination
+      if (response.page) {
+        setTotalPages(response.page.total_page || 1);
+        setCurrentPage(response.page.current_page || 1);
+      }
     } catch (error: any) {
       console.error("Error loading more studies:", error);
     } finally {
@@ -628,7 +648,9 @@ function AddStudyModal({ isOpen, onClose, noteId }: AddStudyModalProps) {
                 type="text"
                 placeholder="Search studies by name..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                }}
                 className="w-full bg-gray-700 border border-gray-600 text-gray-100 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-400"
               />
               {searchLoading && (
@@ -636,6 +658,10 @@ function AddStudyModal({ isOpen, onClose, noteId }: AddStudyModalProps) {
                   <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500"></div>
                 </div>
               )}
+            </div>
+            {/* Debug info - bisa dihapus setelah fix */}
+            <div className="text-xs text-gray-500 mt-2">
+              Debug: Search term: "{searchTerm}" | Results: {studies.length} | Loading: {searchLoading.toString()}
             </div>
           </div>
 
