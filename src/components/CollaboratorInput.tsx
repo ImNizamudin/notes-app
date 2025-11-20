@@ -20,7 +20,6 @@ export default function CollaboratorInput({ noteId }: CollaboratorInputProps) {
     error,
     fetchCollaborators, 
     createCollaboration, 
-    deleteCollaboration
   } = useCollaborationStore();
   
   const [query, setQuery] = useState("");
@@ -73,7 +72,6 @@ export default function CollaboratorInput({ noteId }: CollaboratorInputProps) {
       
       setSearchResults(filteredUsers);
     } catch (e) {
-      console.error("Search failed", e);
       setSearchResults([]);
     } finally {
       setIsSearching(false);
@@ -100,28 +98,8 @@ export default function CollaboratorInput({ noteId }: CollaboratorInputProps) {
         
         fetchCollaborators(noteId);
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        alert(`Failed to add collaborator: ${errorMessage}`);
+        alert(`Failed to add collaborator: ${error?.message}`);
       }
-    }
-  };
-
-  const handleRemoveCollab = async (userId: string) => {
-    const userToRemove = collaborators.find(user => user.id === userId);
-    const username = userToRemove?.username || userId;
-    
-    const isConfirmed = window.confirm(
-      `Are you sure you want to remove ${username} from collaborators?`
-    );
-    
-    if (!isConfirmed) return;
-    
-    try {
-      await deleteCollaboration(userId, noteId);
-      setSuccessMessage(`✅ Successfully removed ${username} from collaborators!`);
-      fetchCollaborators(noteId);
-    } catch (error) {
-      alert(`Failed to remove collaborator: ${error?.response?.meta?.message || 'error'}`);
     }
   };
 
@@ -183,14 +161,6 @@ export default function CollaboratorInput({ noteId }: CollaboratorInputProps) {
                     )}
                   </div>
                 </div>
-                <button
-                  onClick={() => handleRemoveCollab(user.id)}
-                  className="p-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors"
-                  title="Remove collaborator"
-                  type="button"
-                >
-                  <UserMinus className="w-4 h-4" />
-                </button>
               </div>
             ))}
           </div>

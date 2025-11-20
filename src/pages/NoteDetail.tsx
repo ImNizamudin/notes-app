@@ -1495,10 +1495,10 @@ function NoteDetail() {
                       <h4 className="text-blue-300 font-medium mb-1">Collaboration Info</h4>
                       <p className="text-blue-200 text-sm">
                         {note.user_owner?.can_kick 
-                          ? "As the owner, you can remove collaborators from this note."
+                          ? "Sebagai pemilik, Anda dapat menghapus kolaborator dari catatan ini."
                           : note.user_collaborators?.some((collab: any) => collab.can_leave && !collab.is_owner)
-                          ? "You can leave this collaboration if you no longer wish to collaborate on this note."
-                          : "You are the owner of this note or cannot leave this collaboration."
+                          ? "Anda dapat meninggalkan kolaborasi ini jika Anda tidak lagi ingin berkolaborasi pada catatan ini"
+                          : "Anda adalah pemilik catatan ini atau tidak dapat meninggalkan kolaborasi ini."
                         }
                       </p>
                     </div>

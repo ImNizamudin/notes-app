@@ -866,6 +866,23 @@ function WebinarModal({ isOpen, onClose, webinar, courseName, webinarNumber, onS
 
   if (!isOpen) return null;
 
+  // Fungsi untuk mendapatkan nama hari dalam Bahasa Indonesia
+  const getIndonesianDay = (dateTimeString: string) => {
+    const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+    const date = new Date(dateTimeString);
+    return days[date.getDay()];
+  };
+
+  // Fungsi untuk format tanggal tampilan
+  const formatDateDisplay = (dateTimeString: string) => {
+    const date = new Date(dateTimeString);
+    return date.toLocaleDateString('id-ID', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    });
+  };
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
       <div className="bg-gray-800 rounded-xl w-full max-w-md">
@@ -916,17 +933,39 @@ function WebinarModal({ isOpen, onClose, webinar, courseName, webinarNumber, onS
           </div>
 
           {/* Scheduled At Input */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Jadwal Webinar
-            </label>
-            <input
-              type="datetime-local"
-              value={formData.scheduled_at}
-              onChange={(e) => setFormData(prev => ({ ...prev, scheduled_at: e.target.value }))}
-              className="w-full bg-gray-700 border border-gray-600 text-gray-100 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
+         <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-300 mb-2">
+            Jadwal Webinar
+          </label>
+          <div className="flex items-center space-x-3">
+            <div className="flex-1">
+              <input
+                type="datetime-local"
+                value={formData.scheduled_at}
+                onChange={(e) => setFormData(prev => ({ ...prev, scheduled_at: e.target.value }))}
+                className="w-full bg-gray-700 border border-gray-600 text-gray-100 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+            <div className={`w-32 px-3 py-3 border rounded-lg text-center transition-colors ${
+              formData.scheduled_at 
+                ? 'bg-gray-700 border-gray-600 text-gray-100' 
+                : 'bg-gray-800 border-gray-700 text-gray-500'
+            }`}>
+              {formData.scheduled_at ? (
+                <>
+                  <div className="text-sm font-medium">
+                    {getIndonesianDay(formData.scheduled_at)}
+                  </div>
+                  <div className="text-xs text-gray-400 mt-1">
+                    {formatDateDisplay(formData.scheduled_at)}
+                  </div>
+                </>
+              ) : (
+                <div className="text-sm text-gray-500">Pilih tanggal</div>
+              )}
+            </div>
           </div>
+        </div>
 
           <div className="flex space-x-3">
             <button
@@ -1451,7 +1490,7 @@ export default function StudyTrackers() {
               <div>
                 <h1 className="text-2xl font-bold text-gray-100">Study Tracker</h1>
                 <p className="text-gray-400 text-sm">
-                  Semester {data.semester} - {data.header.year} Periode {data.header.period}
+                  Semester {data.semester} - Tahun {data.header.year} Periode {data.header.period}
                   {data.status === "done" && (
                     <span className="ml-2 px-2 py-1 bg-red-900/50 border border-red-700 text-red-300 text-xs rounded-lg">
                       DONE
