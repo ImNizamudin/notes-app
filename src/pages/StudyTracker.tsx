@@ -430,6 +430,7 @@ interface AddStudyModalProps {
 function AddStudyModal({ isOpen, onClose, noteId }: AddStudyModalProps) {
   const [selectedStudies, setSelectedStudies] = useState<number[]>([]);
   const [studies, setStudies] = useState<Study[]>([]);
+  const [allSelectedStudies, setAllSelectedStudies] = useState<Study[]>([]);
   const [loading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [searchLoading, setSearchLoading] = useState(false);
@@ -447,10 +448,16 @@ function AddStudyModal({ isOpen, onClose, noteId }: AddStudyModalProps) {
         ...(search ? { search } : {})
       });
 
-      // fetch data
       const response = await apiClient(`/studies?${params}`, "GET");
 
-      setStudies(response.studies);
+      // Jika page 1 (search baru atau load pertama), replace studies
+      // Jika load more, append ke studies yang ada
+      if (page === 1) {
+        setStudies(response.studies || []);
+      } else {
+        setStudies(prev => [...prev, ...(response.studies || [])]);
+      }
+      
       setTotalPages(response.page.total_page);
       setCurrentPage(response.page.current_page);
 
@@ -461,23 +468,49 @@ function AddStudyModal({ isOpen, onClose, noteId }: AddStudyModalProps) {
     }
   };
 
-  // Debounce search
+  // Update allSelectedStudies ketika selectedStudies berubah
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (isOpen) {
-        setCurrentPage(1);
-        fetchStudies(searchTerm, 1);
+    const fetchSelectedStudiesDetails = async () => {
+      if (selectedStudies.length === 0) {
+        setAllSelectedStudies([]);
+        return;
       }
-    }, 500);
 
-    return () => clearTimeout(timeoutId);
-  }, [searchTerm, isOpen]);
+      try {
+        // Ambil detail studi yang dipilih dari API atau dari studies yang sudah ada
+        const selectedDetails = selectedStudies.map(id => {
+          // Cari di studies yang sudah di-fetch
+          const existingStudy = studies.find(s => s.id === id);
+          if (existingStudy) return existingStudy;
+
+          // Jika tidak ditemukan, buat object sementara
+          return {
+            id,
+            name: `Loading...`,
+            sks: 0,
+            semester: 0,
+            is_practical: false,
+            study_field_id: 0,
+            created_at: '',
+            updated_at: ''
+          };
+        }).filter(Boolean);
+
+        setAllSelectedStudies(selectedDetails);
+      } catch (error) {
+        console.error("Error fetching selected studies details:", error);
+      }
+    };
+
+    fetchSelectedStudiesDetails();
+  }, [selectedStudies, studies]);
 
   // Load studies pertama kali modal dibuka
   useEffect(() => {
     if (isOpen) {
       fetchStudies();
       setSelectedStudies([]);
+      setAllSelectedStudies([]);
       setSearchTerm("");
       setCurrentPage(1);
     }
@@ -540,16 +573,16 @@ function AddStudyModal({ isOpen, onClose, noteId }: AddStudyModalProps) {
         noteId
       );
 
-      const selectedStudyNames = selectedStudies.map(id => {
-        const study = studies.find(s => s.id === id);
-        return study ? study.name : `Study ID: ${id}`;
-      }).filter(Boolean);
+      const selectedStudyNames = allSelectedStudies.map(study => 
+        study.name
+      ).filter(Boolean);
 
       // Show success alert with study names
       alert(`Sukses berhasil menambahkan ${selectedStudies.length} study${selectedStudies.length !== 1 ? 'ies' : ''}:\n\n${selectedStudyNames.map(name => `• ${name}`).join('\n')}`);
 
       onClose();
       setSelectedStudies([]);
+      setAllSelectedStudies([]);
 
       window.dispatchEvent(new CustomEvent('refreshStudyTracker'));
     } catch (error: any) {
@@ -561,9 +594,8 @@ function AddStudyModal({ isOpen, onClose, noteId }: AddStudyModalProps) {
   };
 
   const getSelectedStudyNames = () => {
-    return selectedStudies.map(id => {
-      const study = studies.find(s => s.id === id);
-      return study ? `${study.name} (${study.sks} SKS)` : "";
+    return allSelectedStudies.map(study => {
+      return `${study.name} (${study.sks} SKS)`;
     }).filter(Boolean);
   };
 
@@ -625,7 +657,7 @@ function AddStudyModal({ isOpen, onClose, noteId }: AddStudyModalProps) {
               <div className="flex flex-wrap gap-2">
                 {getSelectedStudyNames().map((name, index) => (
                   <span
-                    key={index}
+                    key={selectedStudies[index]} // Gunakan studyId sebagai key
                     className="inline-flex items-center space-x-1 bg-blue-600/20 text-blue-300 text-xs px-2 py-1 rounded border border-blue-500/30"
                   >
                     <span>{name}</span>
@@ -679,6 +711,9 @@ function AddStudyModal({ isOpen, onClose, noteId }: AddStudyModalProps) {
                           <div className="flex items-center space-x-2 mb-1">
                             <span className="font-medium text-gray-100 truncate">
                               {study.name}
+                              {selectedStudies.includes(study.id) && (
+                                <span className="ml-2 text-blue-400 text-xs">✓ Selected</span>
+                              )}
                             </span>
                             <span className="text-xs bg-gray-600 text-gray-300 px-2 py-1 rounded">
                               {generateStudyCode(study)}

@@ -97,7 +97,7 @@ export default function CollaboratorInput({ noteId }: CollaboratorInputProps) {
         setSearchResults([]);
         
         fetchCollaborators(noteId);
-      } catch (error) {
+      } catch (error:any) {
         alert(`Failed to add collaborator: ${error?.message}`);
       }
     }

@@ -10,6 +10,91 @@ interface WhatsAppModalProps {
   onSuccess: () => void;
 }
 
+// Modal untuk informasi sebelum integrasi WhatsApp
+interface WhatsAppInfoModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onContinue: () => void;
+}
+
+function WhatsAppInfoModal({ isOpen, onClose, onContinue }: WhatsAppInfoModalProps) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+      <div className="bg-gray-800 rounded-xl w-full max-w-md">
+        <div className="p-6 border-b border-gray-700">
+          <h2 className="text-xl font-bold text-gray-100">Sebelum Melanjutkan</h2>
+          <p className="text-gray-400 text-sm mt-1">
+            Pastikan Anda sudah memenuhi persyaratan berikut
+          </p>
+        </div>
+
+        <div className="p-6">
+          <div className="bg-blue-900/20 border border-blue-700 rounded-lg p-4 mb-4">
+            <p className="text-blue-300 text-sm">
+              Sebelum melakukan integrasi WhatsApp BOT, pastikan Anda sudah:
+            </p>
+          </div>
+
+          <div className="space-y-3 mb-6">
+            <div className="flex items-start space-x-3">
+              <div className="flex-shrink-0 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center mt-0.5">
+                <span className="text-white text-sm font-bold">1</span>
+              </div>
+              <div>
+                <p className="text-gray-300 text-sm font-medium">
+                  Bergabung di WhatsApp Group: "Belajar Bareng Radarku"
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start space-x-3">
+              <div className="flex-shrink-0 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center mt-0.5">
+                <span className="text-white text-sm font-bold">2</span>
+              </div>
+              <div>
+                <p className="text-gray-300 text-sm font-medium">
+                  Melakukan proses registrasi dengan mengirim pesan pribadi ke admin bot group:
+                </p>
+                <div className="bg-gray-700 rounded-lg p-3 mt-2">
+                  <code className="text-green-400 text-sm font-mono">
+                    .cli@{"<nomor Anda yang tergabung di grup>"}
+                  </code>
+                </div>
+                <p className="text-gray-400 text-xs mt-2">
+                  *Ganti {"<nomor Anda yang tergabung di grup>"} dengan nomor WhatsApp Anda
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-yellow-900/20 border border-yellow-700 rounded-lg p-3 mb-4">
+            <p className="text-yellow-300 text-xs">
+              💡 <strong>Tips:</strong> Pastikan nomor WhatsApp yang akan didaftarkan sama dengan nomor yang tergabung di grup
+            </p>
+          </div>
+
+          <div className="flex space-x-3">
+            <button
+              onClick={onClose}
+              className="flex-1 px-4 py-3 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 transition-colors"
+            >
+              Tutup
+            </button>
+            <button
+              onClick={onContinue}
+              className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition-colors"
+            >
+              Lanjutkan Integrasi
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function WhatsAppModal({ isOpen, onClose, onSuccess }: WhatsAppModalProps) {
   const [formData, setFormData] = useState({
     phone: "",
@@ -62,7 +147,7 @@ function WhatsAppModal({ isOpen, onClose, onSuccess }: WhatsAppModalProps) {
           {/* Phone Number */}
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-300 mb-2">
-              WhatsApp Number
+              Nomor WhatsApp
             </label>
             <div className="relative">
               <input
@@ -80,7 +165,7 @@ function WhatsAppModal({ isOpen, onClose, onSuccess }: WhatsAppModalProps) {
           {/* Study Field */}
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-300 mb-2">
-              Study Field
+              Jurusan
             </label>
             <select
               value={formData.study_field_id}
@@ -139,6 +224,7 @@ export default function Profile() {
   const { user, loading, error, fetchUserProfile } = useAuthStore();
   const [isEditing, setIsEditing] = useState(false);
   const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
+  const [showWhatsAppInfoModal, setShowWhatsAppInfoModal] = useState(false);
   const [editForm, setEditForm] = useState({
     username: "",
     fullname: "",
@@ -170,6 +256,17 @@ export default function Profile() {
   const handleWhatsAppSuccess = () => {
     // Refresh profile data setelah berhasil integrasi
     fetchUserProfile();
+  };
+
+  const handleWhatsAppIntegration = () => {
+    // Tampilkan modal informasi terlebih dahulu
+    setShowWhatsAppInfoModal(true);
+  };
+
+  const handleContinueToWhatsAppForm = () => {
+    // Tutup modal informasi dan buka modal form
+    setShowWhatsAppInfoModal(false);
+    setShowWhatsAppModal(true);
   };
 
   const formatDate = (dateString?: string) => {
@@ -380,20 +477,23 @@ export default function Profile() {
                               Verified
                             </span>
                           ) : (
-                            <span className="text-yellow-400 text-sm flex items-center">
+                            <button
+                              onClick={handleWhatsAppIntegration}
+                              className="text-yellow-400 text-sm flex items-center hover:text-yellow-300 transition-colors"
+                            >
                               <XCircle className="w-3 h-3 mr-1" />
-                              Not Verified
-                            </span>
+                              Verify Now
+                            </button>
                           )}
                         </span>
                       </div>
                     ) : (
                       <button
-                        onClick={() => setShowWhatsAppModal(true)}
+                        onClick={handleWhatsAppIntegration}
                         className="flex items-center space-x-2 text-blue-400 hover:text-blue-300 transition-colors"
                       >
                         <Plus className="w-4 h-4" />
-                        <span>Add Data</span>
+                        <span>Add WhatsApp Number</span>
                       </button>
                     )}
                   </div>
@@ -434,12 +534,19 @@ export default function Profile() {
         )}
       </div>
 
-      {/* WhatsApp Integration Modal */}
-      <WhatsAppModal
-        isOpen={showWhatsAppModal}
-        onClose={() => setShowWhatsAppModal(false)}
-        onSuccess={handleWhatsAppSuccess}
+      {/* WhatsApp Info Modal */}
+      <WhatsAppInfoModal
+        isOpen={showWhatsAppInfoModal}
+        onClose={() => setShowWhatsAppInfoModal(false)}
+        onContinue={handleContinueToWhatsAppForm}
       />
+
+      {/* WhatsApp Integration Modal */}
+        <WhatsAppModal
+          isOpen={showWhatsAppModal}
+          onClose={() => setShowWhatsAppModal(false)}
+          onSuccess={handleWhatsAppSuccess}
+        />
     </div>
   );
 }

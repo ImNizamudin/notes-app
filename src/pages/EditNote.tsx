@@ -289,8 +289,8 @@ function EditNote() {
         setTitle(local.title);
         setBody(local.body);
         setTagsInput(local.tags.join(", "));
-        setType(local.type || "daily_note");
-        setVisibility(local.visibility || "collaboration");
+        setType(local?.type || "daily_note");
+        setVisibility(local?.visibility || "collaboration");
         setThumbnail(local.thumbnail || null);
         setLoading(false);
       } else {

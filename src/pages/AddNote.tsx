@@ -382,7 +382,6 @@ function AddNote() {
       navigate("/");
     } catch (e: any) {
       setErr(e.response.meta.message);
-      console.log(e.response.meta.message)
     } finally {
       setLoading(false);
     }
