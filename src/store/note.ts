@@ -13,8 +13,11 @@ export interface Note {
     id: string | number;
     username: string;
     fullname: string;
+    email: string;
   }
   [k: string]: any;
+  visibility?: string;
+  type?: string;
 }
 
 interface NotesState {
@@ -30,11 +33,11 @@ interface NotesState {
     tags?: string[];
     type?: string;
     visibility?: string;
-    thumbnail?: string; // Tambahkan thumbnail di payload
+    thumbnail?: string;
   }) => Promise<void>;
   updateNote: (
     note_id: string | number,
-    payload: { title: string; body: string; tags?: string[]; type?: string; thumbnail?: string }
+    payload: { title: string; body: string; tags?: string[]; type?: string; visibility?: string; thumbnail?: string }
   ) => Promise<void>;
   deleteNote: (note_id: string | number) => Promise<void>;
   getNote: (note_id: string | number) => Note | undefined;

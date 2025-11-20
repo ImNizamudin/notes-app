@@ -10,7 +10,7 @@ import {
   Users, 
   ImageIcon, Eye, Upload, AlertCircle, CheckCircle, RefreshCw, Trash2,
   Lock,
-    Earth
+    Earth, FileText
 } from "lucide-react";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
@@ -87,35 +87,20 @@ interface GalleryResponse {
   };
 }
 
-// interface Collaboration {
-//   id: string;
-//   created_at: string;
-//   updated_at: string;
-//   note_id: number;
-//   user_id: number;
-//   user: {
-//     id: number;
-//     username: string;
-//     fullname: string;
-//     email: string;
-//   };
-//   body: string;
-// }
-
 // Modal untuk visibility options
 interface VisibilityModalProps {
   isOpen: boolean;
   onClose: () => void;
-  selectedType: "private" | "default";
-  onSelect: (type: "private" | "default") => void;
+  selectedVisibility: "private" | "public" | "collaboration"; // ✅ UBAH INI
+  onSelect: (visibility: "private" | "public" | "collaboration") => void; // ✅ UBAH INI
 }
 
-function VisibilityModal({ isOpen, onClose, selectedType, onSelect }: VisibilityModalProps) {
+function VisibilityModal({ isOpen, onClose, selectedVisibility, onSelect }: VisibilityModalProps) {
   if (!isOpen) return null;
 
   const options = [
     {
-      value: "default" as const,
+      value: "public" as const,
       icon: Earth,
       title: "Public",
       description: "Visible to everyone",
@@ -127,6 +112,13 @@ function VisibilityModal({ isOpen, onClose, selectedType, onSelect }: Visibility
       title: "Private",
       description: "Only visible to you",
       color: "text-purple-400"
+    },
+    {
+      value: "collaboration" as const,
+      icon: Users,
+      title: "Collaboration",
+      description: "Visible to you and collaborators",
+      color: "text-green-400"
     }
   ];
 
@@ -136,6 +128,76 @@ function VisibilityModal({ isOpen, onClose, selectedType, onSelect }: Visibility
         <div className="p-6 border-b border-gray-700">
           <h2 className="text-xl font-bold text-gray-100">Select Visibility</h2>
           <p className="text-gray-400 text-sm mt-1">Choose who can see this note</p>
+        </div>
+        
+        <div className="p-6 space-y-3">
+          {options.map((option) => (
+            <button
+              key={option.value}
+              onClick={() => onSelect(option.value)}
+              className={`w-full p-4 text-left rounded-lg border-2 transition-all ${
+                selectedVisibility === option.value
+                  ? "border-blue-500 bg-blue-500/10"
+                  : "border-gray-600 bg-gray-700 hover:border-gray-500"
+              }`}
+            >
+              <div className="flex items-center space-x-3">
+                <option.icon className={`w-5 h-5 ${option.color}`} />
+                <div>
+                  <div className="font-medium text-gray-100">{option.title}</div>
+                  <div className="text-sm text-gray-400">{option.description}</div>
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+        
+        <div className="p-6 border-t border-gray-700 flex justify-end">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 transition-colors"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+interface TypeModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  selectedType: "daily_note" | "tracker";
+  onSelect: (type: "daily_note" | "tracker") => void;
+}
+
+function TypeModal({ isOpen, onClose, selectedType, onSelect }: TypeModalProps) {
+  if (!isOpen) return null;
+
+  const options = [
+    {
+      value: "daily_note" as const,
+      icon: FileText,
+      title: "Daily Note",
+      description: "Standard note for general purposes",
+      color: "text-blue-400"
+    },
+    {
+      value: "tracker" as const,
+      icon: RefreshCw,
+      title: "Study Tracker",
+      description: "Note with study tracking features",
+      color: "text-orange-400"
+    }
+  ];
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+      <div className="bg-gray-800 rounded-xl w-full max-w-md">
+        <div className="p-6 border-b border-gray-700">
+          <h2 className="text-xl font-bold text-gray-100">Select Note Type</h2>
+          <p className="text-gray-400 text-sm mt-1">Choose the type of note</p>
         </div>
         
         <div className="p-6 space-y-3">
@@ -194,10 +256,11 @@ function EditNote() {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [tagsInput, setTagsInput] = useState("");
-  const [type, setType] = useState<"private" | "default">("default");
+  const [type, setType] = useState<"daily_note" | "tracker">("daily_note");
+  const [visibility, setVisibility] = useState<"private" | "public" | "collaboration">("collaboration");
+  
   const [thumbnail, setThumbnail] = useState<string | null>(null);
   const [showMediaModal, setShowMediaModal] = useState(false);
-  const [showVisibilityModal, setShowVisibilityModal] = useState(false);
   const [activeTab, setActiveTab] = useState<"gallery" | "upload">("gallery");
   const [galleryFiles, setGalleryFiles] = useState<GalleryFile[]>([]);
   const [loadingGallery, setLoadingGallery] = useState(false);
@@ -211,6 +274,9 @@ function EditNote() {
   const [err, setErr] = useState<string | null>(null);
   const [showCollaboratorModal, setShowCollaboratorModal] = useState(false);
 
+  const [showVisibilityModal, setShowVisibilityModal] = useState(false);
+  const [showTypeModal, setShowTypeModal] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -223,7 +289,8 @@ function EditNote() {
         setTitle(local.title);
         setBody(local.body);
         setTagsInput(local.tags.join(", "));
-        setType(local.type || "default");
+        setType(local.type || "daily_note");
+        setVisibility(local.visibility || "collaboration");
         setThumbnail(local.thumbnail || null);
         setLoading(false);
       } else {
@@ -233,7 +300,8 @@ function EditNote() {
           setTitle(data.title);
           setBody(data.body);
           setTagsInput(data.tags?.join(", ") || "");
-          setType(data.type || "default");
+          setType(data.type || "daily_note");
+          setVisibility(data.visibility || "collaboration");
           setThumbnail(data.thumbnail || null);
         } catch (e: any) {
           setErr(e.message || "Gagal memuat note");
@@ -299,12 +367,6 @@ function EditNote() {
           formData.append("fields", fieldName);
           formData.append(fieldName, file);
 
-          // Simulate progress
-          // for (let progress = 0; progress <= 100; progress += 10) {
-            // setUploadProgress(prev => ({ ...prev, [file.name]: progress }));
-            // await new Promise(resolve => setTimeout(resolve, 50));
-          // }
-
           await apiClient("/files/notes_app/bulk-upload", "POST", formData);
         } catch (fileError: any) {
           console.error(`Error uploading ${file.name}:`, fileError);
@@ -356,6 +418,7 @@ function EditNote() {
         body, 
         tags, 
         type,
+        visibility,
         thumbnail: thumbnail || undefined 
       });
 
@@ -375,8 +438,9 @@ function EditNote() {
     title !== initial.title ||
     body !== initial.body ||
     tagsInput !== initial.tags?.join(", ") ||
-    type !== (initial.type || "default") ||
-    thumbnail !== (initial.thumbnail || null)
+    type !== (initial.type || "daily_note") ||
+    thumbnail !== (initial.thumbnail || null) ||
+    visibility !== (initial.visibility || "collaboration")
   );
 
   const handleCancel = () => {
@@ -413,9 +477,14 @@ function EditNote() {
     setThumbnail(null);
   };
 
-  const handleSelectVisibility = (visibilityType: "private" | "default") => {
-    setType(visibilityType);
+  const handleSelectVisibility = (visibilityType: "private" | "public" | "collaboration") => {
+    setVisibility(visibilityType);
     setShowVisibilityModal(false);
+  };
+
+  const handleSelectType = (noteType: "daily_note" | "tracker") => {
+    setType(noteType);
+    setShowTypeModal(false);
   };
 
   return (
@@ -500,35 +569,57 @@ function EditNote() {
                 )}
               </div>
 
-              {/* Visibility Display seperti AddNote */}
+              {/* Action Buttons Display */}
               <div className="px-6 pb-2 pt-0">
                 <div className="flex items-center space-x-2 text-gray-300">
+                  {/* Type Button */}
+                  <button
+                    type="button"
+                    onClick={() => setShowTypeModal(true)}
+                    className="flex items-center space-x-2 px-3 py-2 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 transition-colors"
+                  >
+                    {type === "tracker" ? (
+                      <RefreshCw className="w-4 h-4 text-orange-400" />
+                    ) : (
+                      <FileText className="w-4 h-4 text-blue-400" />
+                    )}
+                    <span className="text-sm capitalize">{type === "tracker" ? "Study Tracker" : "Daily Note"}</span>
+                  </button>
+
                   {/* Visibility Button */}
                   <button
                     type="button"
                     onClick={() => setShowVisibilityModal(true)}
-                    className="flex items-center space-x-2 px-2 py-2 bg-gray-700 text-gray-300 rounded-full hover:bg-gray-600 transition-colors"
+                    className="flex items-center space-x-2 px-3 py-2 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 transition-colors"
                   >
-                    {type === "private" ? (
+                    {visibility === "private" ? (
                       <Lock className="w-4 h-4 text-purple-400" />
+                    ) : visibility === "collaboration" ? (
+                      <Users className="w-4 h-4 text-green-400" />
                     ) : (
                       <Earth className="w-4 h-4 text-blue-400" />
                     )}
+                    <span className="text-sm capitalize">{visibility}</span>
                   </button>
-                  {/* Collaborator Button */}
-                  <button
-                    type="button"
-                    onClick={() => setShowCollaboratorModal(true)}
-                    className="flex items-center space-x-2 px-2 py-2 bg-gray-700 text-gray-300 rounded-full hover:bg-gray-600 transition-colors"
-                    title="Manage Collaborators"
-                  >
-                    <Users className="w-4 h-4 text-green-400" />
-                  </button>
+                  
+                  {/* Collaborator Button - hanya tampil jika visibility collaboration */}
+                  {visibility === "collaboration" && (
+                    <button
+                      type="button"
+                      onClick={() => setShowCollaboratorModal(true)}
+                      className="flex items-center space-x-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-500 transition-colors"
+                      title="Manage Collaborators"
+                    >
+                      <Users className="w-4 h-4" />
+                      <span className="text-sm">Collaborators</span>
+                    </button>
+                  )}
+                  
                   {/* Thumbnail Button */}
                   <button
                     type="button"
                     onClick={() => setShowMediaModal(true)}
-                    className="flex items-center space-x-2 px-2 py-2 bg-gray-700 text-gray-300 rounded-full hover:bg-gray-600 transition-colors"
+                    className="flex items-center space-x-2 px-3 py-2 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 transition-colors"
                   >
                     <ImageIcon className="w-4 h-4" />
                     {thumbnail && (
@@ -641,11 +732,19 @@ function EditNote() {
           </div>
         )}
 
+        {/* Type Modal */}
+        <TypeModal
+          isOpen={showTypeModal}
+          onClose={() => setShowTypeModal(false)}
+          selectedType={type}
+          onSelect={handleSelectType}
+        />
+
         {/* Visibility Modal */}
         <VisibilityModal
           isOpen={showVisibilityModal}
           onClose={() => setShowVisibilityModal(false)}
-          selectedType={type}
+          selectedVisibility={visibility}
           onSelect={handleSelectVisibility}
         />
 

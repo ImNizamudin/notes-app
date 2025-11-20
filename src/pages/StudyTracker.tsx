@@ -16,12 +16,26 @@ interface AssignmentHeader {
   assignment_number: number;
 }
 
+interface Webinar {
+  webinar_number: number;
+  link: string | null;
+  presented_at: string | null;
+  scheduled_at: string | null;
+}
+
+interface WebinarHeader {
+  end_at: string;
+  start_at: string;
+  webinar_number: number;
+}
+
 interface StudyTrackerHeader {
   id: number;
   year: number;
   period: number;
-  session_headers: SessionHeader[];
-  assignment_headers: AssignmentHeader[];
+  sessions: SessionHeader[]; // BERUBAH: dari session_headers menjadi sessions
+  assignments: AssignmentHeader[]; // BERUBAH: dari assignment_headers menjadi assignments
+  webinars: WebinarHeader[]; // BERUBAH: dari webinar_headers menjadi webinars
 }
 
 interface Session {
@@ -33,9 +47,10 @@ interface Session {
 
 interface Assignment {
   score: number | null;
-  submitted_at: string | null; // ✅ submitted_at, BUKAN is_submitted
+  submitted_at: string | null;
   assignment_number: number;
 }
+
 interface StudyTrackerBody {
   id: number;
   name: string;
@@ -48,6 +63,7 @@ interface StudyTrackerBody {
   submit_assignment_third: string | null;
   sessions: Session[];
   assignments: Assignment[];
+  webinars: (Webinar | null)[]; // BERUBAH: bisa berisi null
 }
 
 interface StudyTrackerData {
@@ -55,17 +71,8 @@ interface StudyTrackerData {
   body: StudyTrackerBody[];
   semester: number;
   status: string;
+  note_id: number; // TAMBAHAN: ada note_id di level atas
 }
-
-// interface StudyTrackerResponse {
-//   data: {
-//     study_tracker: StudyTrackerData;
-//   };
-//   meta: {
-//     message: string;
-//     code: number;
-//   };
-// }
 
 // Modal Component
 interface SessionModalProps {
@@ -431,30 +438,28 @@ function AddStudyModal({ isOpen, onClose, noteId }: AddStudyModalProps) {
   const [totalPages, setTotalPages] = useState(1);
 
   // Fetch studies dengan search dan pagination
-const fetchStudies = async (search: string = "", page: number = 1) => {
-  setSearchLoading(true);
-  try {
-    const params = new URLSearchParams({
-      limit: "10",
-      page: page.toString(),
-      ...(search ? { search } : {})
-    });
+  const fetchStudies = async (search: string = "", page: number = 1) => {
+    setSearchLoading(true);
+    try {
+      const params = new URLSearchParams({
+        limit: "10",
+        page: page.toString(),
+        ...(search ? { search } : {})
+      });
 
-    // fetch data
-    const response: StudiesResponse = await apiClient(`/studies?${params}`, "GET");
+      // fetch data
+      const response = await apiClient(`/studies?${params}`, "GET");
 
-    // set state sesuai struktur tipe yang kamu kasih
-    setStudies(response.studies || []);
-    setTotalPages(response.page.total_page);
-    setCurrentPage(response.page.current_page);
+      setStudies(response.studies);
+      setTotalPages(response.page.total_page);
+      setCurrentPage(response.page.current_page);
 
-  } catch (error: any) {
-    console.error("Error fetching studies:", error);
-  } finally {
-    setSearchLoading(false);
-  }
-};
-
+    } catch (error: any) {
+      console.error("Error fetching studies:", error);
+    } finally {
+      setSearchLoading(false);
+    }
+  };
 
   // Debounce search
   useEffect(() => {
@@ -762,18 +767,6 @@ const fetchStudies = async (search: string = "", page: number = 1) => {
   );
 }
 
-interface WebinarHeader {
-  end_at: string;
-  start_at: string;
-  webinar_number: number;
-}
-
-interface Webinar {
-  score: number | null;
-  present_at: string | null;
-  webinar_number: number;
-}
-
 // Update StudyTrackerHeader interface
 interface StudyTrackerHeader {
   id: number;
@@ -784,27 +777,11 @@ interface StudyTrackerHeader {
   webinar_headers: WebinarHeader[]; // Tambahkan ini
 }
 
-// Update StudyTrackerBody interface
-interface StudyTrackerBody {
-  id: number;
-  name: string;
-  sks: number;
-  is_practical: boolean;
-  status: string;
-  semester: number;
-  submit_assignment_first: string | null;
-  submit_assignment_second: string | null;
-  submit_assignment_third: string | null;
-  sessions: Session[];
-  assignments: Assignment[];
-  webinars: Webinar[]; // Tambahkan ini
-}
-
 // Tambahkan WebinarModal component
 interface WebinarModalProps {
   isOpen: boolean;
   onClose: () => void;
-  webinar: Webinar;
+  webinar: Webinar | null;
   courseName: string;
   studyTrackerId: number;
   webinarNumber: number;
@@ -814,17 +791,27 @@ interface WebinarModalProps {
 
 function WebinarModal({ isOpen, onClose, webinar, courseName, webinarNumber, onSave, noteId, studyTrackerId }: WebinarModalProps) {
   const [formData, setFormData] = useState({
-    present: !!webinar.present_at,
-    score: webinar.score || ''
+    presented: !!webinar?.presented_at,
+    link: webinar?.link || '',
+    scheduledAt: webinar?.scheduled_at ? new Date(webinar.scheduled_at).toISOString().slice(0, 16) : ''
   });
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    setFormData({
-      present: !!webinar.present_at,
-      score: webinar.score || ''
-    });
+    if (webinar) {
+      setFormData({
+        presented: !!webinar.presented_at,
+        link: webinar.link || '',
+        scheduledAt: webinar.scheduled_at ? new Date(webinar.scheduled_at).toISOString().slice(0, 16) : ''
+      });
+    } else {
+      setFormData({
+        presented: false,
+        link: '',
+        scheduledAt: ''
+      });
+    }
     setError(null);
   }, [webinar]);
 
@@ -834,11 +821,11 @@ function WebinarModal({ isOpen, onClose, webinar, courseName, webinarNumber, onS
     setError(null);
 
     try {
-      // Prepare the payload
+      // Prepare the payload sesuai dengan struktur data baru
       const payload = {
-        is_presented: formData.present,
-        score: formData.score != null ? Number(formData.score) : null
-        // score: formData.score ? parseInt(formData.score) : 0
+        link: formData.link || null,
+        presented_at: formData.presented ? new Date().toISOString() : null,
+        scheduled_at: formData.scheduledAt ? new Date(formData.scheduledAt).toISOString() : null
       };
 
       console.log('API Parameters:', {
@@ -847,8 +834,8 @@ function WebinarModal({ isOpen, onClose, webinar, courseName, webinarNumber, onS
         payload
       });
 
-      // Make API call - menggunakan studyTrackerId dan webinar.id
-      const response = await apiClient(
+      // Make API call
+      await apiClient(
         `/study_trackers/${studyTrackerId}/webinars/${webinarNumber}`,
         "PUT",
         payload,
@@ -859,10 +846,9 @@ function WebinarModal({ isOpen, onClose, webinar, courseName, webinarNumber, onS
       // Update local state
       const webinarData: Partial<Webinar> = {
         webinar_number: webinarNumber,
-        present_at: formData.present ? new Date().toISOString() : null,
-        // score: formData.score ? parseInt(formData.score) : null
-        score: formData.score != null ? Number(formData.score) : null
-
+        link: formData.link || null,
+        presented_at: formData.presented ? new Date().toISOString() : null,
+        scheduled_at: formData.scheduledAt ? new Date(formData.scheduledAt).toISOString() : null
       };
 
       onSave(webinarData);
@@ -882,7 +868,9 @@ function WebinarModal({ isOpen, onClose, webinar, courseName, webinarNumber, onS
     <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
       <div className="bg-gray-800 rounded-xl w-full max-w-md">
         <div className="p-6 border-b border-gray-700">
-          <h2 className="text-xl font-bold text-gray-100">Edit Webinar</h2>
+          <h2 className="text-xl font-bold text-gray-100">
+            {webinar ? 'Edit Webinar' : 'Add Webinar'}
+          </h2>
           <p className="text-gray-400 text-sm mt-1">
             {courseName} - Webinar {webinarNumber}
           </p>
@@ -900,30 +888,41 @@ function WebinarModal({ isOpen, onClose, webinar, courseName, webinarNumber, onS
             <label className="flex items-center space-x-3 cursor-pointer">
               <input
                 type="checkbox"
-                checked={formData.present}
-                onChange={(e) => setFormData(prev => ({ ...prev, present: e.target.checked }))}
+                checked={formData.presented}
+                onChange={(e) => setFormData(prev => ({ ...prev, presented: e.target.checked }))}
                 className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 focus:ring-2"
               />
               <div className="flex items-center space-x-2">
                 <CheckCircle className="w-5 h-5 text-green-400" />
-                <span className="text-gray-300">Hadir</span>
+                <span className="text-gray-300">Telah Disampaikan</span>
               </div>
             </label>
           </div>
 
-          {/* Score Input */}
-          <div className="mb-6">
+          {/* Link Input */}
+          <div className="mb-4">
             <label className="block text-sm font-medium text-gray-300 mb-2">
-              Nilai
+              Link Webinar
             </label>
             <input
-              type="number"
-              min="0"
-              max="100"
-              value={formData.score}
-              onChange={(e) => setFormData(prev => ({ ...prev, score: e.target.value }))}
+              type="url"
+              value={formData.link}
+              onChange={(e) => setFormData(prev => ({ ...prev, link: e.target.value }))}
               className="w-full bg-gray-700 border border-gray-600 text-gray-100 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Masukkan nilai (0-100)"
+              placeholder="https://example.com/webinar"
+            />
+          </div>
+
+          {/* Scheduled At Input */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Jadwal Webinar
+            </label>
+            <input
+              type="datetime-local"
+              value={formData.scheduledAt}
+              onChange={(e) => setFormData(prev => ({ ...prev, scheduledAt: e.target.value }))}
+              className="w-full bg-gray-700 border border-gray-600 text-gray-100 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
 
@@ -957,6 +956,7 @@ function WebinarModal({ isOpen, onClose, webinar, courseName, webinarNumber, onS
   );
 }
 
+// ===========================================================================================================
 
 export default function StudyTrackers() {
   const navigate = useNavigate();
@@ -978,7 +978,6 @@ export default function StudyTrackers() {
   const [showAssignmentModal, setShowAssignmentModal] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [showAddStudyModal, setShowAddStudyModal] = useState(false);
-  // const [showDeleteStudyModal, setShowDeleteStudyModal] = useState(false);
 
   const [deletingCourseId, setDeletingCourseId] = useState<number | null>(null);
 
@@ -1018,40 +1017,29 @@ export default function StudyTrackers() {
       setError(null);
       const response = await apiClient("/study_trackers", "GET", undefined, {}, noteId.toString());
       
-      console.log("Study Tracker API Response:", response); // ✅ DEBUG LOG
-      
-      // ✅ PERBAIKI: Handle berbagai kemungkinan struktur response
-      if (response?.data?.study_tracker) {
-        setData(response.data.study_tracker);
-      } else if (response?.study_tracker) {
-        // Jika response langsung memiliki study_tracker (tanpa data wrapper)
+      if (response?.study_tracker) {
         setData(response.study_tracker);
-      } else if (response) {
-        // Jika response adalah data langsung
-        setData(response);
       } else {
         throw new Error("Invalid response structure");
       }
       
     } catch (err: any) {
       console.error("Error fetching study tracker:", err);
-      setError(err.response?.meta?.message || err.message || "Failed to load study tracker data");
+      setError(err.response?.meta?.message || "Failed to load study tracker data");
     } finally {
       setLoading(false);
     }
   };
 
+  console.log(data)
+
   // Action Handlers
   const handleGenerateStudyTracker = async (noteId: string) => {
     try {
-      // ✅ HAPUS 'const response = ' karena tidak digunakan
       await apiClient("/study_trackers", "POST", undefined, {}, noteId.toString());
       alert("Study tracker berhasil dibuat!");
       await fetchStudyTracker(noteId);
-    } catch (err: any) { // ✅ TAMBAHKIN ': any' atau gunakan type guard
-      console.error("Error generating study tracker:", err);
-      
-      // ✅ PERBAIKI error handling
+    } catch (err: any) { 
       const errorMessage = err.response?.meta?.message || "Failed to generate study tracker";
       setError(errorMessage);
       alert(errorMessage);
@@ -1324,14 +1312,59 @@ export default function StudyTrackers() {
     }
   };
 
-  const handleWebinarClick = (courseId: number, courseName: string, webinar: Webinar) => {
+  const handleWebinarClick = (courseId: number, courseName: string, webinar: Webinar | null) => {
+    // Jika webinar null, buat object webinar baru dengan webinar_number
+    const webinarToEdit = webinar || { 
+      webinar_number: 0, 
+      link: null, 
+      presented_at: null, 
+      scheduled_at: null 
+    };
+    
     setSelectedWebinar({
       courseId,
       courseName,
-      webinar,
-      webinarNumber: webinar.webinar_number
+      webinar: webinarToEdit,
+      webinarNumber: webinarToEdit.webinar_number
     });
     setShowWebinarModal(true);
+  };
+
+  const getWebinarStatus = (webinar: Webinar | null) => {
+    if (!webinar) return [];
+    
+    const statuses = [];
+    
+    if (webinar.presented_at) {
+      statuses.push({
+        type: 'presented',
+        icon: <CheckCircle className="w-4 h-4 text-green-400" />,
+        tooltip: 'Telah Disampaikan'
+      });
+    }
+    
+    if (webinar.link) {
+      statuses.push({
+        type: 'link',
+        icon: <a href={webinar.link} target="_blank" rel="noopener noreferrer" 
+              className="text-blue-400 hover:text-blue-300" onClick={(e) => e.stopPropagation()}>
+          <Send className="w-4 h-4" />
+        </a>,
+        tooltip: 'Klik untuk membuka link webinar'
+      });
+    }
+    
+    if (webinar.scheduled_at) {
+      statuses.push({
+        type: 'scheduled',
+        content: (
+          <Calendar className="w-4 h-4 text-purple-400" />
+        ),
+        tooltip: `Terjadwal: ${new Date(webinar.scheduled_at).toLocaleDateString('id-ID')}`
+      });
+    }
+    
+    return statuses;
   };
 
   const handleSaveWebinar = async (webinarData: Partial<Webinar>) => {
@@ -1342,44 +1375,45 @@ export default function StudyTrackers() {
     const courseIndex = updatedData.body.findIndex(course => course.id === selectedWebinar.courseId);
     
     if (courseIndex !== -1) {
+      // Pastikan array webinars ada
+      if (!updatedData.body[courseIndex].webinars) {
+        updatedData.body[courseIndex].webinars = [];
+      }
+      
       const webinarIndex = updatedData.body[courseIndex].webinars.findIndex(
-        w => w.webinar_number === selectedWebinar.webinarNumber
+        w => w && w.webinar_number === selectedWebinar.webinarNumber
       );
       
       if (webinarIndex !== -1) {
+        // Update webinar yang sudah ada
         updatedData.body[courseIndex].webinars[webinarIndex] = {
           ...updatedData.body[courseIndex].webinars[webinarIndex],
           ...webinarData
         };
-        setData(updatedData);
+      } else {
+        // Buat webinar baru jika belum ada
+        const newWebinar: Webinar = {
+          webinar_number: selectedWebinar.webinarNumber,
+          link: null,
+          presented_at: null,
+          scheduled_at: null,
+          ...webinarData
+        };
+        
+        // Cari posisi yang tepat berdasarkan webinar_number
+        let insertIndex = 0;
+        for (let i = 0; i < updatedData.body[courseIndex].webinars.length; i++) {
+          if (updatedData.body[courseIndex].webinars[i] && 
+              updatedData.body[courseIndex].webinars[i]!.webinar_number < selectedWebinar.webinarNumber) {
+            insertIndex = i + 1;
+          }
+        }
+        
+        updatedData.body[courseIndex].webinars.splice(insertIndex, 0, newWebinar);
       }
+      
+      setData(updatedData);
     }
-  };
-
-  const getWebinarStatus = (webinar: Webinar) => {
-    const statuses = [];
-    
-    if (webinar.present_at) {
-      statuses.push({
-        type: 'present',
-        icon: <CheckCircle className="w-4 h-4 text-green-400" />,
-        tooltip: 'Hadir'
-      });
-    }
-    
-    if (webinar.score !== null) {
-      statuses.push({
-        type: 'score',
-        content: (
-          <span className="text-sm font-medium text-yellow-400">
-            {webinar.score}
-          </span>
-        ),
-        tooltip: `Nilai: ${webinar.score}`
-      });
-    }
-    
-    return statuses;
   };
 
   // Tambahkan fungsi handleFinalize
@@ -1390,7 +1424,7 @@ export default function StudyTrackers() {
 
     try {
       await apiClient("/study_trackers/finalize", "PUT", undefined, {}, noteId.toString());
-      alert("Study tracker berhasil difinalisasi!");
+      alert("Study tracker berhasil difinalisasi!\n\nSemua data sekarang terkunci dan tidak dapat diubah lagi.");
       await fetchStudyTracker(noteId);
     } catch (err: any) {
       const errorMessage = err.response?.meta?.message || "Failed to finalize study tracker";
@@ -1416,6 +1450,11 @@ export default function StudyTrackers() {
                 <h1 className="text-2xl font-bold text-gray-100">Study Tracker</h1>
                 <p className="text-gray-400 text-sm">
                   Semester {data.semester} - {data.header.year} Period {data.header.period}
+                  {data.status === "finalized" && (
+                    <span className="ml-2 px-2 py-1 bg-red-900/50 border border-red-700 text-red-300 text-xs rounded-lg">
+                      FINALIZED
+                    </span>
+                  )}
                 </p>
               </div>
             </div>
@@ -1423,8 +1462,8 @@ export default function StudyTrackers() {
               <div className="flex items-center space-x-2 text-sm text-gray-400">
                 <Calendar className="w-4 h-4" />
                 <span>
-                  {formatDate(data.header.session_headers[0]?.start_at)} -{" "}
-                  {formatDate(data.header.session_headers[data.header.session_headers.length - 1]?.end_at)}
+                  {formatDate(data.header.sessions[0]?.start_at)} -{" "}
+                  {formatDate(data.header.sessions[data.header.sessions.length - 1]?.end_at)}
                 </span>
               </div>
               <button className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition-colors">
@@ -1450,8 +1489,13 @@ export default function StudyTrackers() {
                 Study Tracker Submitted
               </div>
             )}
+            {data.status === "finalized" && (
+              <div className="px-3 py-1 bg-red-900/50 border border-red-700 text-red-300 text-sm rounded-lg">
+                Study Tracker Finalized
+              </div>
+            )}
             {/* Generate Study Tracker Button */}
-            {data.body.length < 1 && (
+            {data.body.length < 1 && data.status !== "finalized" && (
               <button
                 onClick={() => handleGenerateStudyTracker(noteId)}
                 className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-500 transition-colors"
@@ -1460,7 +1504,7 @@ export default function StudyTrackers() {
                 <span>Generate Study Tracker</span>
               </button>
             )}
-            {data.status !== "submitted" && (
+            {data.status !== "submitted" && data.status !== "finalized" && (
               <div className="flex items-center space-x-3">
                 {/* Add Study Button */}
                 <button
@@ -1481,7 +1525,7 @@ export default function StudyTrackers() {
                 </button>
               </div>
             )}
-            {data.status == "submitted" && (
+            {data.status === "submitted" && data.status !== "finalized" && (
               <button
                 onClick={() => handleFinalize(noteId)}
                 className="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-500 transition-colors"
@@ -1491,11 +1535,10 @@ export default function StudyTrackers() {
               </button>
             )}
           </div>
-          
         </div>
 
         {/* Summary Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
           <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -1520,7 +1563,7 @@ export default function StudyTrackers() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-400 text-sm">Sessions</p>
-                <p className="text-2xl font-bold text-gray-100">{data.header.session_headers.length}</p>
+                <p className="text-2xl font-bold text-gray-100">{data.header.sessions.length}</p>
               </div>
               <Clock className="w-8 h-8 text-purple-400" />
             </div>
@@ -1529,7 +1572,7 @@ export default function StudyTrackers() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-400 text-sm">Assignments</p>
-                <p className="text-2xl font-bold text-gray-100">{data.header.assignment_headers.length}</p>
+                <p className="text-2xl font-bold text-gray-100">{data.header.assignments.length}</p>
               </div>
               <FileText className="w-8 h-8 text-orange-400" />
             </div>
@@ -1538,7 +1581,7 @@ export default function StudyTrackers() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-400 text-sm">Webinars</p>
-                <p className="text-2xl font-bold text-gray-100">{data.header.webinar_headers?.length || 0}</p>
+                <p className="text-2xl font-bold text-gray-100">{data.header.webinars?.length || 0}</p>
               </div>
               <Users className="w-8 h-8 text-pink-400" />
             </div>
@@ -1558,7 +1601,7 @@ export default function StudyTrackers() {
                   </th>
                   
                   {/* Sessions Headers */}
-                  {data.header.session_headers.map((sessionHeader) => (
+                  {data.header.sessions.map((sessionHeader) => (
                     <th key={sessionHeader.session_number} className="text-center p-4 text-gray-300 font-medium bg-gray-750 w-[100px]">
                       <div className="flex flex-col items-center">
                         <span className="text-sm font-semibold">S{sessionHeader.session_number}</span>
@@ -1570,7 +1613,7 @@ export default function StudyTrackers() {
                   ))}
                   
                   {/* Assignments Headers */}
-                  {data.header.assignment_headers.map((assignmentHeader) => (
+                  {data.header.assignments.map((assignmentHeader) => (
                     <th key={assignmentHeader.assignment_number} className="text-center p-4 text-gray-300 font-medium bg-gray-750 w-[100px]">
                       <div className="flex flex-col items-center">
                         <span className="text-sm font-semibold">A{assignmentHeader.assignment_number}</span>
@@ -1582,12 +1625,12 @@ export default function StudyTrackers() {
                   ))}
 
                   {/* Webinars Headers */}
-                  {data.header.webinar_headers?.map((webinarHeader) => (
+                  {data.header.webinars?.map((webinarHeader) => (
                     <th key={webinarHeader.webinar_number} className="text-center p-4 text-gray-300 font-medium bg-gray-750 w-[100px]">
                       <div className="flex flex-col items-center">
                         <span className="text-sm font-semibold">W{webinarHeader.webinar_number}</span>
                         <span className="text-xs text-gray-400 mt-1">
-                          {formatDate(webinarHeader.start_at)}
+                          Webinar {webinarHeader.webinar_number}
                         </span>
                       </div>
                     </th>
@@ -1640,6 +1683,7 @@ export default function StudyTrackers() {
                       {course.sessions.map((session) => {
                         const sessionStatuses = getSessionStatus(session);
                         const isEmpty = sessionStatuses.length === 0;
+                        const isFinalized = data.status === "finalized";
                         
                         return (
                           <td 
@@ -1647,22 +1691,31 @@ export default function StudyTrackers() {
                             className="text-center p-4"
                           >
                             <button
-                              onClick={() => handleSessionClick(course.id, course.name, session)}
+                              onClick={() => !isFinalized && handleSessionClick(course.id, course.name, session)}
+                              disabled={isFinalized}
                               className={`w-full h-full flex items-center justify-center space-x-1 min-h-[60px] rounded-lg transition-colors ${
-                                isEmpty 
-                                  ? 'bg-gray-800 hover:bg-gray-600 border border-dashed border-gray-600' 
-                                  : 'cursor-help hover:bg-gray-700'
+                                isFinalized 
+                                  ? 'bg-gray-900 cursor-not-allowed opacity-50' 
+                                  : isEmpty 
+                                    ? 'bg-gray-800 hover:bg-gray-600 border border-dashed border-gray-600' 
+                                    : 'cursor-help hover:bg-gray-700'
                               }`}
                               title={
-                                isEmpty 
-                                  ? 'Klik untuk menambahkan data' 
-                                  : sessionStatuses.map(s => s.tooltip).join(' • ')
+                                isFinalized 
+                                  ? 'Study tracker sudah difinalize' 
+                                  : isEmpty 
+                                    ? 'Klik untuk menambahkan data' 
+                                    : sessionStatuses.map(s => s.tooltip).join(' • ')
                               }
                             >
                               {isEmpty ? (
                                 <div className="flex flex-col items-center space-y-1">
-                                  {/* <Plus className="w-4 h-4 text-gray-400" />
-                                  <span className="text-xs text-gray-400">Add</span> */}
+                                  {!isFinalized && (
+                                    <>
+                                      {/* <Plus className="w-4 h-4 text-gray-400" />
+                                      <span className="text-xs text-gray-400">Add</span> */}
+                                    </>
+                                  )}
                                 </div>
                               ) : (
                                 sessionStatuses.map((status, index) => (
@@ -1680,29 +1733,39 @@ export default function StudyTrackers() {
                       {course.assignments.map((assignment) => {
                         const assignmentStatuses = getAssignmentStatus(assignment);
                         const isEmpty = assignmentStatuses.length === 0;
-                        
+                        const isFinalized = data.status === "finalized";
+  
                         return (
                           <td 
                             key={assignment.assignment_number} 
                             className="text-center p-4"
                           >
                             <button
-                              onClick={() => handleAssignmentClick(course.id, course.name, assignment)}
+                              onClick={() => !isFinalized && handleAssignmentClick(course.id, course.name, assignment)}
+                              disabled={isFinalized}
                               className={`w-full h-full flex items-center justify-center space-x-1 min-h-[60px] rounded-lg transition-colors ${
-                                isEmpty 
-                                  ? 'bg-gray-800 hover:bg-gray-600 border border-dashed border-gray-600' 
-                                  : 'cursor-help hover:bg-gray-700'
+                                isFinalized 
+                                  ? 'bg-gray-900 cursor-not-allowed opacity-50' 
+                                  : isEmpty 
+                                    ? 'bg-gray-800 hover:bg-gray-600 border border-dashed border-gray-600' 
+                                    : 'cursor-help hover:bg-gray-700'
                               }`}
                               title={
-                                isEmpty 
-                                  ? 'Klik untuk menambahkan data' 
-                                  : assignmentStatuses.map(s => s.tooltip).join(' • ')
+                                isFinalized 
+                                  ? 'Study tracker sudah difinalize' 
+                                  : isEmpty 
+                                    ? 'Klik untuk menambahkan data' 
+                                    : assignmentStatuses.map(s => s.tooltip).join(' • ')
                               }
                             >
                               {isEmpty ? (
                                 <div className="flex flex-col items-center space-y-1">
-                                  {/* <Plus className="w-4 h-4 text-gray-400" />
-                                  <span className="text-xs text-gray-400">Add</span> */}
+                                  {!isFinalized && (
+                                    <>
+                                      {/* <Plus className="w-4 h-4 text-gray-400" />
+                                      <span className="text-xs text-gray-400">Add</span> */}
+                                    </>
+                                  )}
                                 </div>
                               ) : (
                                 assignmentStatuses.map((status, index) => (
@@ -1716,33 +1779,49 @@ export default function StudyTrackers() {
                         );
                       })}
                       
-                      {/* Webinars Data */}
-                      {course.webinars?.map((webinar) => {
-                        const webinarStatuses = getWebinarStatus(webinar);
+                      {/* Webinars Data - disabled jika status finalized */}
+                      {course.webinars?.map((webinar, index) => {
+                        const webinarNumber = index + 1;
+                        
+                        // Handle null webinar entries dengan membuat object default
+                        const webinarData = webinar || {
+                          webinar_number: webinarNumber,
+                          link: null,
+                          presented_at: null,
+                          scheduled_at: null
+                        };
+
+                        const webinarStatuses = getWebinarStatus(webinarData);
                         const isEmpty = webinarStatuses.length === 0;
+                        const isFinalized = data.status === "finalized";
                         
                         return (
-                          <td 
-                            key={webinar.webinar_number} 
-                            className="text-center p-4"
-                          >
+                          <td key={`webinar-${webinarNumber}`} className="text-center p-4">
                             <button
-                              onClick={() => handleWebinarClick(course.id, course.name, webinar)}
+                              onClick={() => !isFinalized && handleWebinarClick(course.id, course.name, webinarData)}
+                              disabled={isFinalized}
                               className={`w-full h-full flex items-center justify-center space-x-1 min-h-[60px] rounded-lg transition-colors ${
-                                isEmpty 
-                                  ? 'bg-gray-800 hover:bg-gray-600 border border-dashed border-gray-600' 
-                                  : 'cursor-help hover:bg-gray-700'
+                                isFinalized 
+                                  ? 'bg-gray-900 cursor-not-allowed opacity-50' 
+                                  : isEmpty 
+                                    ? 'bg-gray-800 hover:bg-gray-600 border border-dashed border-gray-600' 
+                                    : 'cursor-help hover:bg-gray-700'
                               }`}
                               title={
-                                isEmpty 
-                                  ? 'Klik untuk menambahkan data' 
-                                  : webinarStatuses.map(s => s.tooltip).join(' • ')
+                                isFinalized 
+                                  ? 'Study tracker sudah difinalize' 
+                                  : isEmpty 
+                                    ? 'Klik untuk menambahkan data webinar' 
+                                    : webinarStatuses.map(s => s.tooltip).join(' • ')
                               }
                             >
                               {isEmpty ? (
                                 <div className="flex flex-col items-center space-y-1">
-                                  {/* <Plus className="w-4 h-4 text-gray-400" />
-                                  <span className="text-xs text-gray-400">Add</span> */}
+                                  {!isFinalized && (
+                                    <>
+                                      {/* Empty state */}
+                                    </>
+                                  )}
                                 </div>
                               ) : (
                                 webinarStatuses.map((status, index) => (
@@ -1780,7 +1859,7 @@ export default function StudyTrackers() {
                       </td>
 
                       {/* Delete Button - hanya muncul jika status bukan submitted */}
-                      {data.status !== "submitted" && (
+                      {data.status !== "submitted" && data.status !== "finalized" && (
                         <td className="text-center p-4">
                           <button
                             onClick={() => handleDeleteCourse(course.id)}
@@ -1807,7 +1886,7 @@ export default function StudyTrackers() {
         {/* Legend */}
         <div className="mt-6 p-4 bg-gray-800 border border-gray-700 rounded-lg">
           <h4 className="text-sm font-medium text-gray-300 mb-3">Legend</h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 text-sm">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-4 text-sm">
             <div className="flex items-center space-x-2">
               <CheckCircle className="w-4 h-4 text-green-400" />
               <span className="text-gray-400">Hadir</span>
@@ -1821,13 +1900,23 @@ export default function StudyTrackers() {
               <span className="text-gray-400">Nilai</span>
             </div>
             <div className="flex items-center space-x-2">
-              <Users className="w-4 h-4 text-pink-400" />
-              <span className="text-gray-400">Webinar</span>
+              <CheckCircle className="w-4 h-4 text-green-400" />
+              <span className="text-gray-400">Webinar Disampaikan</span>
             </div>
             <div className="flex items-center space-x-2">
-              <Plus className="w-4 h-4 text-gray-400" />
-              <span className="text-gray-400">Klik untuk menambah data</span>
+              <Send className="w-4 h-4 text-blue-400" />
+              <span className="text-gray-400">Link Webinar</span>
             </div>
+            <div className="flex items-center space-x-2">
+              <Calendar className="w-4 h-4 text-purple-400" />
+              <span className="text-gray-400">Webinar Terjadwal</span>
+            </div>
+            {data.status === "finalized" && (
+              <div className="flex items-center space-x-2">
+                <div className="w-4 h-4 bg-gray-600 rounded border border-gray-500"></div>
+                <span className="text-gray-400">Terkunci (Finalized)</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -1859,20 +1948,20 @@ export default function StudyTrackers() {
       />
 
       {/* Assignment Modal */}
-    <AssignmentModal
-  isOpen={showAssignmentModal}
-  onClose={() => setShowAssignmentModal(false)}
-  assignment={selectedAssignment?.assignment || { 
-    assignment_number: 0, 
-    score: null, 
-    submitted_at: null // ✅ GANTI is_submitted MENJADI submitted_at
-  }}
-  courseName={selectedAssignment?.courseName || ''}
-  assignmentNumber={selectedAssignment?.assignmentNumber || 0}
-  onSave={handleSaveAssignment}
-  noteId={noteId}
-  studyTrackerId={selectedAssignment?.courseId || 0}
-/>
+      <AssignmentModal
+        isOpen={showAssignmentModal}
+        onClose={() => setShowAssignmentModal(false)}
+        assignment={selectedAssignment?.assignment || { 
+          assignment_number: 0, 
+          score: null, 
+          submitted_at: null
+        }}
+        courseName={selectedAssignment?.courseName || ''}
+        assignmentNumber={selectedAssignment?.assignmentNumber || 0}
+        onSave={handleSaveAssignment}
+        noteId={noteId}
+        studyTrackerId={selectedAssignment?.courseId || 0}
+      />
 
       <AddStudyModal
         isOpen={showAddStudyModal}
@@ -1884,9 +1973,10 @@ export default function StudyTrackers() {
         isOpen={showWebinarModal}
         onClose={() => setShowWebinarModal(false)}
         webinar={selectedWebinar?.webinar || { 
-          webinar_number: 0, 
-          score: null, 
-          present_at: null
+          webinar_number: selectedWebinar?.webinarNumber || 0, 
+          link: null,
+          presented_at: null,
+          scheduled_at: null
         }}
         courseName={selectedWebinar?.courseName || ''}
         studyTrackerId={selectedWebinar?.courseId || 0}

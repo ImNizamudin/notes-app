@@ -211,7 +211,7 @@ function NoteDetail() {
       setCurrentPage(1);
       await loadComments(1);
     } catch (error: any) {
-      setErr(error.response.meta.message);
+      setErr(error.message);
     }
   };
 
@@ -791,28 +791,6 @@ function NoteDetail() {
                 {/* Bagian 4: Thumbnail Image */}
                 {note.thumbnail && (
                   <div className="rounded-lg overflow-hidden relative">
-                    {/* <div className="flex items-center space-x-2 bg-gray-700 px-4 py-2">
-                      <ImageIcon className="w-4 h-4 text-gray-400" />
-                      <span className="text-sm text-gray-300">Thumbnail</span>
-                    </div>
-
-                    <a
-                      href={`https://minio-s3.radarku.online/radarku-bucket/notes_app/${note.thumbnail}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="absolute top-[0px] right-2 p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full"
-                      title="View image in new tab"
-                    >
-                      <Eye className="w-4 h-4" />
-                    </a>
-
-                    <img 
-                      src={`https://minio-s3.radarku.online/radarku-bucket/notes_app/${note.thumbnail}`}
-                      alt="Note thumbnail"
-                      className="w-full h-64 object-cover"
-                    /> */}
-
-                    
                     {imgError ? (
                       <div className="w-full h-32 flex flex-col items-center justify-center bg-gray-800 text-gray-300 text-xs">
                         <ImageOff className="w-6 h-6 mb-1 opacity-80" />
@@ -1067,44 +1045,7 @@ function NoteDetail() {
                                 />
                               </div>
 
-                              {/* Thumbnail Editor Section
-                              <div className="flex items-center space-x-3">
-                                {editThumbnail ? (
-                                  <div className="relative">
-                                    <a
-                                      href={`https://minio-s3.radarku.online/radarku-bucket/notes_app/${editThumbnail}`}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="block"
-                                      title="View image in new tab"
-                                    >
-                                      <img 
-                                        src={`https://minio-s3.radarku.online/radarku-bucket/notes_app/${editThumbnail}`}
-                                        alt="Thumbnail preview"
-                                        className="w-32 h-32 object-cover rounded-lg border border-gray-600"
-                                      />
-                                    </a>
-                                    <button
-                                      type="button"
-                                      onClick={() => setEditThumbnail(null)}
-                                      className="absolute -top-2 -right-2 p-1 bg-red-600 hover:bg-red-700 text-white rounded-full"
-                                      title="Remove thumbnail"
-                                    >
-                                      <X className="w-3 h-3" />
-                                    </button>
-                                  </div>
-                                ) : (
-                                  <button
-                                    type="button"
-                                    onClick={() => setShowMediaModal(true)}
-                                    className="flex items-center space-x-2 px-3 py-2 bg-gray-600 text-gray-300 rounded-lg hover:bg-gray-500 transition-colors"
-                                    title="Add thumbnail"
-                                  >
-                                    <ImageIcon className="w-4 h-4" />
-                                    <span className="text-sm">Change Image</span>
-                                  </button>
-                                )}
-                              </div> */}
+                              
 
                               {/* Action Buttons - DI KANAN */}
                               <div className="flex justify-end space-x-2 pt-2">
@@ -1375,7 +1316,7 @@ function NoteDetail() {
               <div>
                 <h2 className="text-xl font-bold text-gray-100">Collaborators</h2>
                 <p className="text-gray-400 text-sm mt-1">
-                  Note visibility: <span className="capitalize">{note.visibility}</span>
+                  Note visibility: <span className="capitalize">{note?.visibility}</span>
                 </p>
               </div>
               <button
@@ -1393,14 +1334,14 @@ function NoteDetail() {
                 <div className="flex items-center justify-between bg-gray-700 p-4 rounded-lg">
                   <div className="flex items-center space-x-3">
                     <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-lg">
-                      {getInitials(note.user_owner?.username || "")}
+                      {getInitials(note?.user_owner?.username || "")}
                     </div>
                     <div>
                       <p className="text-gray-100 font-medium text-lg">
-                        {note.user_owner?.username || note.username || 'Unknown user'}
+                        {note?.user_owner?.username || note?.username || 'Unknown user'}
                       </p>
                       <p className="text-gray-400 text-sm">
-                        {note.user_owner?.email || 'No email'}
+                        {note?.user_owner?.email || 'No email'}
                       </p>
                     </div>
                   </div>
@@ -1414,13 +1355,13 @@ function NoteDetail() {
               <div className="mb-6">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-medium text-gray-300">
-                    Collaborators ({Array.isArray(note.user_collaborators) ? note.user_collaborators.length : 0})
+                    Collaborators ({Array.isArray(note?.user_collaborators) ? note?.user_collaborators.length : 0})
                   </h3>
                 </div>
                 
-                {Array.isArray(note.user_collaborators) && note.user_collaborators.length > 0 ? (
+                {Array.isArray(note?.user_collaborators) && note?.user_collaborators.length > 0 ? (
                   <div className="space-y-3">
-                    {note.user_collaborators.map((collaborator: any, index: number) => (
+                    {note?.user_collaborators.map((collaborator: any, index: number) => (
                       <div key={collaborator.id || index} className="flex items-center justify-between bg-gray-700 p-4 rounded-lg">
                         <div className="flex items-center space-x-3">
                           <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-blue-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
@@ -1452,7 +1393,7 @@ function NoteDetail() {
                     <Users className="w-16 h-16 mx-auto mb-3 opacity-50" />
                     <p className="text-lg">No collaborators</p>
                     <p className="text-sm mt-1">
-                      {note.visibility === 'private' 
+                      {note?.visibility === 'private' 
                         ? 'This note is private and has no collaborators.'
                         : 'No collaborators have been added to this note yet.'
                       }
@@ -1462,7 +1403,7 @@ function NoteDetail() {
               </div>
 
               {/* Info untuk private visibility */}
-              {note.visibility === 'private' && (
+              {note?.visibility === 'private' && (
                 <div className="border-t border-gray-700 pt-6">
                   <div className="bg-blue-900/20 border border-blue-700 rounded-lg p-4">
                     <div className="flex items-start space-x-3">
@@ -1481,7 +1422,7 @@ function NoteDetail() {
 
             <div className="p-6 border-t border-gray-700 flex justify-between items-center">
               <div className="text-gray-400 text-sm">
-                Total: {1 + (Array.isArray(note.user_collaborators) ? note.user_collaborators.length : 0)} people
+                Total: {1 + (Array.isArray(note?.user_collaborators) ? note?.user_collaborators.length : 0)} people
               </div>
               <button
                 onClick={() => setShowCollaborationModal(false)}

@@ -527,11 +527,11 @@ const fetchGalleryFiles = async (page: number = 1) => {
               {/* Fallback CSS animation */}
               <style>
                 {`
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-      `}
+                  @keyframes spin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                  }
+                `}
               </style>
             </div>
           ) : galleryFiles.length === 0 ? (
