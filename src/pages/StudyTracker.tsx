@@ -613,11 +613,11 @@ function AddStudyModal({ isOpen, onClose, noteId }: AddStudyModalProps) {
     }
   };
 
-  const getSelectedStudyNames = () => {
-    return allSelectedStudies.map(study => {
-      return `${study.name} (${study.sks} SKS)`;
-    }).filter(Boolean);
-  };
+  // const getSelectedStudyNames = () => {
+  //   return allSelectedStudies.map(study => {
+  //     return `${study.name} (${study.sks} SKS)`;
+  //   }).filter(Boolean);
+  // };
 
   // Generate kode matkul sederhana berdasarkan nama
   const generateStudyCode = (study: Study) => {
@@ -666,39 +666,42 @@ function AddStudyModal({ isOpen, onClose, noteId }: AddStudyModalProps) {
           </div>
 
           {/* Selected Studies Preview */}
-          {selectedStudies.length > 0 && (
-            <div className="p-4 border-b border-gray-700 bg-gray-750">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-gray-300">
-                  Selected ({selectedStudies.length}/5)
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setSelectedStudies([])}
-                  className="text-xs text-red-400 hover:text-red-300"
-                >
-                  Clear all
-                </button>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {getSelectedStudyNames().map((name, index) => (
-                  <span
-                    key={selectedStudies[index]} // Gunakan studyId sebagai key
-                    className="inline-flex items-center space-x-1 bg-blue-600/20 text-blue-300 text-xs px-2 py-1 rounded border border-blue-500/30"
-                  >
-                    <span>{name}</span>
-                    <button
-                      type="button"
-                      onClick={() => handleStudyToggle(selectedStudies[index])}
-                      className="text-blue-400 hover:text-blue-300 ml-1"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
+        {selectedStudies.length > 0 && (
+  <div className="p-4 border-b border-gray-700 bg-gray-750">
+    <div className="flex items-center justify-between mb-2">
+      <span className="text-sm font-medium text-gray-300">
+        Selected ({selectedStudies.length}/5)
+      </span>
+      <button
+        type="button"
+        onClick={() => setSelectedStudies([])}
+        className="text-xs text-red-400 hover:text-red-300"
+      >
+        Clear all
+      </button>
+    </div>
+    <div className="flex flex-wrap gap-2">
+      {selectedStudies.map((studyId) => {
+        const study = studies.find(s => s.id === studyId);
+        return (
+          <span
+            key={studyId} // Gunakan studyId sebagai key
+            className="inline-flex items-center space-x-1 bg-blue-600/20 text-blue-300 text-xs px-2 py-1 rounded border border-blue-500/30"
+          >
+            <span>{study?.name || 'Unknown'}</span>
+            <button
+              type="button"
+              onClick={() => handleStudyToggle(studyId)}
+              className="text-blue-400 hover:text-blue-300 ml-1"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          </span>
+        );
+      })}
+    </div>
+  </div>
+)}
 
           {/* Studies List */}
           <div className="flex-1 overflow-y-auto">

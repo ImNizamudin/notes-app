@@ -1403,7 +1403,7 @@ function NoteDetail() {
                         {note.user_owner?.username || 'Unknown user'}
                       </p>
                       <p className="text-gray-400 text-sm">
-                        {note.user_owner?.user_fullname || 'No full name'}
+                        {note.user_owner?.fullname || 'No full name'}
                       </p>
                     </div>
                   </div>
@@ -1454,7 +1454,7 @@ function NoteDetail() {
                             {/* Leave Button - hanya untuk collaborator yang can_leave dan bukan owner */}
                             {!collaborator.is_owner && collaborator.can_leave && (
                               <button
-                                onClick={() => handleLeaveCollaboration(note.id)}
+                                onClick={() => handleLeaveCollaboration(Number(note.id))}
                                 className="px-3 py-1 bg-red-600 text-white rounded-lg hover:bg-red-500 transition-colors text-sm"
                                 title="Leave collaboration"
                               >
@@ -1465,7 +1465,7 @@ function NoteDetail() {
                             {/* Kick Button - hanya untuk owner yang can_kick dan bukan diri sendiri */}
                             {note.is_deletable && !collaborator.is_owner && (
                               <button
-                                onClick={() => handleKickCollaborator(note.id, collaborator.user_id, collaborator.username)}
+                                onClick={() => handleKickCollaborator(Number(note.id), collaborator.user_id, collaborator.username)}
                                 className="px-3 py-1 bg-orange-600 text-white rounded-lg hover:bg-orange-500 transition-colors text-sm"
                                 title="Kick collaborator"
                               >

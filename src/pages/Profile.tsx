@@ -24,13 +24,18 @@ function WhatsAppInfoModal({ isOpen, onClose, onContinue }: WhatsAppInfoModalPro
     <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
       <div className="bg-gray-800 rounded-xl w-full max-w-md">
         <div className="p-6 border-b border-gray-700">
-          <h2 className="text-xl font-bold text-gray-100">Sebelum Melanjutkan</h2>
+          <h2 className="text-xl font-bold text-gray-100">Perhatian</h2>
           <p className="text-gray-400 text-sm mt-1">
-            Pastikan Anda sudah memenuhi persyaratan berikut
           </p>
         </div>
 
         <div className="p-6">
+          <div className="bg-blue-900/20 border border-blue-700 rounded-lg p-4 mb-4">
+            <p className="text-blue-300 text-sm">
+              Sebelum melakukan integrasi WhatsApp BOT, pastikan Anda sudah:
+            </p>
+          </div>
+
           <div className="space-y-3 mb-6">
             <div className="flex items-start space-x-3">
               <div className="flex-shrink-0 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center mt-0.5">
@@ -38,7 +43,7 @@ function WhatsAppInfoModal({ isOpen, onClose, onContinue }: WhatsAppInfoModalPro
               </div>
               <div>
                 <p className="text-gray-300 text-sm font-medium">
-                  Bergabung di WhatsApp Group: "Belajar Bareng Radarku"
+                  Bergabung di WhatsApp Group: "Blajar Bareng Radarku"
                 </p>
               </div>
             </div>
@@ -49,7 +54,7 @@ function WhatsAppInfoModal({ isOpen, onClose, onContinue }: WhatsAppInfoModalPro
               </div>
               <div>
                 <p className="text-gray-300 text-sm font-medium">
-                  Melakukan proses registrasi dengan mengirim pesan pribadi ke admin bot group:
+                  Melakukan proses registrasi dengan mengirim pesan di WhatsApp Group "Blajar Bareng Radarku":
                 </p>
                 <div className="bg-gray-700 rounded-lg p-3 mt-2">
                   <code className="text-green-400 text-sm font-mono">
