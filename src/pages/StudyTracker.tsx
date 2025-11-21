@@ -298,7 +298,8 @@ function AssignmentModal({ isOpen, onClose, assignment, courseName, assignmentNu
       const assignmentData: Partial<Assignment> = {
         assignment_number: assignmentNumber,
         submitted_at: formData.submitted ? new Date().toISOString() : null,
-        score: formData.score ? Number(formData.score) : 0
+        score: formData.score ? parseInt(String(formData.score)) : null // ✅ JADI null
+        // score: formData.score ? Number(formData.score) : 0
         // score: formData.score ? parseInt(formData.score) : null
       };
 
