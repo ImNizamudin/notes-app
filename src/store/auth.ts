@@ -2,7 +2,7 @@ import { create } from "zustand";
 import apiClient from "../api/client";
 import { initializeApp } from "firebase/app";
 import { getAuth, signInWithPopup, GoogleAuthProvider } from "firebase/auth";
-import { firebaseConfig, urlBackend } from "../env.firebase-fe";
+import { firebaseConfig, urlBackend } from "../../env.firebase-fe";
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);

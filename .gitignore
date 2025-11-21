@@ -1,8 +1,13 @@
 .env
 .env.production
 .env.development
-src/env.firebase-fe.ts
+env.firebase-fe.ts
 
+dist/
+dist.zip
+.htaccess
+
+package-lock.json
 
 # Logs
 logs
@@ -14,7 +19,6 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
-dist
 dist-ssr
 *.local
 
