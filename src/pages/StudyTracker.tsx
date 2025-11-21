@@ -274,7 +274,7 @@ function AssignmentModal({ isOpen, onClose, assignment, courseName, assignmentNu
     try {
       // Prepare the payload according to API requirements
       const payload = {
-        submitted_at: formData.submitted, // true/false
+        is_submitted: formData.submitted, // true/false
         score: formData.score ? Number(formData.score) : 0
         // score: formData.score ? parseInt(formData.score) : 0
       };
