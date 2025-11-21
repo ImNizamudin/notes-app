@@ -8,6 +8,7 @@ dist.zip
 .htaccess
 
 package-lock.json
+stats.html
 
 # Logs
 logs
