@@ -12,7 +12,7 @@ export interface Note {
   user_owner?: {
     id: string | number;
     username: string;
-    fullname: string;
+    user_fullname: string;
     email: string;
     can_kick: boolean;
   }
