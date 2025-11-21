@@ -1,6 +1,7 @@
 .env
 .env.production
 .env.development
+src/env.firebase-fe.ts
 
 
 # Logs
