@@ -1463,7 +1463,7 @@ function NoteDetail() {
                             )}
 
                             {/* Kick Button - hanya untuk owner yang can_kick dan bukan diri sendiri */}
-                            {note.is_deletable && !collaborator.is_owner && (
+                            {note.is_deletable && collaborator.can_kick && (
                               <button
                                 onClick={() => handleKickCollaborator(Number(note.id), collaborator.user_id, collaborator.username)}
                                 className="px-3 py-1 bg-orange-600 text-white rounded-lg hover:bg-orange-500 transition-colors text-sm"
